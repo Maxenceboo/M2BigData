@@ -54,9 +54,9 @@ ORDER BY (service_code, admission_ts, stay_id);
 -- FACT 2 : Diagnostics Posés
 CREATE TABLE IF NOT EXISTS silver.fact_diagnostics (
     stay_id String,
+    age_at_diagnostics UInt8, -- Calculé avec toYear(stay.admission_ts) - patient.birth_year
     code_cim10 LowCardinality(String),
     diag_type LowCardinality(String),
-    libelle_cim10 String,
     created_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(created_at)
 ORDER BY (code_cim10, stay_id);

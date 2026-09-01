@@ -6,9 +6,10 @@ Règles de Gestion et Qualité :
 2. silver.dim_services & silver.dim_cim10 : Tables de dimensions dédupliquées.
 3. silver.fact_sejours : Élimination des dates incohérentes (discharge_ts < admission_ts),
    conservation des séjours en cours (discharge_ts IS NULL -> is_ongoing=1), calcul de la durée en jours.
-4. silver.fact_diagnostics : Enrichissement avec les libellés CIM-10.
+4. silver.fact_diagnostics : Calcul de l'âge au moment du diagnostic (toYear(admission_ts) - birth_year),
+   clé étrangère code_cim10 sans duplication de libellé.
 5. silver.fact_monitoring : Filtrage des constantes hors bornes physiologiques
-   (FC [20, 250], SpO2 [50, 100], Temp [30.0, 45.0]) et détection des alertes médicales.
+   (FC [20, 250], SpO2 [50, 100], Temp [30.0, 45.0]) et calcul pré-agrégé de l'alerte médicale.
 """
 
 import sys
@@ -48,8 +49,9 @@ def run_silver_transformations():
 
     client = get_clickhouse_client()
 
-    # 1. Initialiser le schéma Silver
+    # 1. Initialiser ou mettre à jour le schéma Silver
     print("[INFO] Initialisation des tables Silver...")
+    client.command("DROP TABLE IF EXISTS silver.fact_diagnostics")
     sql_silver = BASE_DIR / "sql" / "02_silver.sql"
     execute_sql_file(client, sql_silver)
     print("  [OK] Schéma Silver vérifié.")
@@ -123,23 +125,23 @@ def run_silver_transformations():
     print(f"       - {invalid_sej} séjours incohérents écartés (discharge < admission)")
     print(f"       - {ongoing_sej} séjours en cours légitimement conservés")
 
-    # 5. FACT Diagnostics (Enrichissement)
-    print("\n[INFO] Transformation silver.fact_diagnostics...")
-    client.command("TRUNCATE TABLE silver.fact_diagnostics")
+    # 5. FACT Diagnostics (Calcul âge au diagnostic, code_cim10 pur)
+    print("\n[INFO] Transformation silver.fact_diagnostics (avec calcul age_at_diagnostics)...")
     client.command("""
-        INSERT INTO silver.fact_diagnostics (stay_id, code_cim10, diag_type, libelle_cim10)
+        INSERT INTO silver.fact_diagnostics (stay_id, age_at_diagnostics, code_cim10, diag_type)
         SELECT DISTINCT
             d.stay_id,
+            toUInt8(greatest(0, toYear(s.admission_ts) - p.birth_year)) AS age_at_diagnostics,
             d.code_cim10,
-            d.diag_type,
-            COALESCE(r.libelle, d.code_cim10) AS libelle_cim10
+            d.diag_type
         FROM bronze.diagnostics AS d
-        LEFT JOIN silver.dim_cim10 AS r ON d.code_cim10 = r.code_cim10
+        JOIN silver.fact_sejours AS s ON d.stay_id = s.stay_id
+        JOIN silver.dim_patients AS p ON s.patient_pseudo_id = p.patient_pseudo_id
     """)
     silver_dia = client.query("SELECT count() FROM silver.fact_diagnostics").result_rows[0][0]
-    print(f"  [OK] silver.fact_diagnostics : {silver_dia} diagnostics enrichis")
+    print(f"  [OK] silver.fact_diagnostics : {silver_dia} diagnostics enregistrés avec calcul d'âge")
 
-    # 6. FACT Monitoring (Filtrage bornes physiologiques et alertes)
+    # 6. FACT Monitoring (Filtrage bornes physiologiques et précalcul alertes)
     print("\n[INFO] Transformation & Filtrage physiologique silver.fact_monitoring...")
     client.command("TRUNCATE TABLE silver.fact_monitoring")
     client.command("""
