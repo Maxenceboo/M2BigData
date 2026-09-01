@@ -6,12 +6,12 @@
 -- 🏥 PILOTAGE HOSPITALIER
 -- -----------------------------------------------------------------------------
 
--- 1. Durée Moyenne de Séjour (DMS) par Service
+-- 1. Durée + (DMS) par Service
 CREATE OR REPLACE VIEW gold.vue_pilotage_dms AS
 SELECT
     s.service_code AS service_code,
     COALESCE(r.service_label, s.service_code) AS service_label,
-    toStartOfMonth(s.admission_ts) AS mois_admission,
+    toStartOfMonth(s.admission_ts) AS mois_admission, -- pour le group by mois, pour visualiser l'evolution des DMS au fil du temps
     countIf(s.is_ongoing = 0) AS nb_sejours_termines,
     countIf(s.is_ongoing = 1) AS nb_sejours_en_cours,
     round(avgIf(s.duree_sejour_jours, s.is_ongoing = 0), 2) AS dms_jours,
