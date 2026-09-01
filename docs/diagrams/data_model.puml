@@ -1,0 +1,88 @@
+@startuml data_model_complet_eds
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+skinparam entity<<BRONZE>> {
+    BackgroundColor #F6DDCC
+    BorderColor #D35400
+    HeaderBackgroundColor #EDBB99
+}
+
+skinparam entity<<FACT>> {
+    BackgroundColor #FDEDEC
+    BorderColor #E74C3C
+    HeaderBackgroundColor #FADBD8
+}
+
+skinparam entity<<DIMENSION>> {
+    BackgroundColor #EBF5FB
+    BorderColor #2980B9
+    HeaderBackgroundColor #D4E6F1
+}
+
+skinparam entity<<GOLD>> {
+    BackgroundColor #E8F8F5
+    BorderColor #16A085
+    HeaderBackgroundColor #A3E4D7
+}
+
+title Modèle de Données EDS - Vision Macro (Bronze -> Silver -> Gold)
+
+package "1. COUCHE BRONZE" #FBEEE6 {
+    entity "bronze.patients" as b_pat <<BRONZE>>
+    entity "bronze.sejours" as b_sej <<BRONZE>>
+    entity "bronze.diagnostics" as b_dia <<BRONZE>>
+    entity "bronze.monitoring" as b_mon <<BRONZE>>
+    entity "bronze.ref_services" as b_refs <<BRONZE>>
+    entity "bronze.ref_cim10" as b_refc <<BRONZE>>
+}
+
+package "2. COUCHE SILVER (Macro : 3 Facts Indépendants)" #FAFAFA {
+    package "Dimensions" #EBF5FB {
+        entity "silver.dim_patients" as s_pat <<DIMENSION>>
+        entity "silver.dim_services" as s_refs <<DIMENSION>>
+        entity "silver.dim_cim10" as s_refc <<DIMENSION>>
+    }
+
+    package "3 Facts Indépendants" #FDEDEC {
+        entity "silver.fact_sejours" as s_sej <<FACT>>
+        entity "silver.fact_diagnostics" as s_dia <<FACT>>
+        entity "silver.fact_monitoring" as s_mon <<FACT>>
+    }
+}
+
+package "3. COUCHE GOLD" #FEF9E7 {
+    entity "gold.vue_pilotage_dms" as g_dms <<GOLD>>
+    entity "gold.vue_pilotage_urgences" as g_urg <<GOLD>>
+    entity "gold.vue_pilotage_readmissions_30j" as g_readm <<GOLD>>
+    entity "gold.vue_pilotage_alertes" as g_alt <<GOLD>>
+    entity "gold.vue_recherche_prevalence" as g_prev <<GOLD>>
+    entity "gold.vue_recherche_cohortes" as g_coh <<GOLD>>
+}
+
+' Lignage Bronze -> Silver
+b_pat -down-> s_pat
+b_refs -down-> s_refs
+b_refc -down-> s_refc
+b_sej -down-> s_sej
+b_dia -down-> s_dia
+b_mon -down-> s_mon
+
+' Relations Dimensionnelles Silver
+s_pat  ||--o{ s_sej
+s_refs ||--o{ s_sej
+s_refc ||--o{ s_dia
+
+' Alimentation Silver -> Gold
+s_sej -down-> g_dms
+s_sej -down-> g_urg
+s_sej -down-> g_readm
+s_mon -down-> g_alt
+s_dia -down-> g_prev
+s_dia -down-> g_coh
+s_pat -down-> g_coh
+
+@enduml

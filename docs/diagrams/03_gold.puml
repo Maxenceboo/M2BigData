@@ -1,0 +1,102 @@
+@startuml gold_schema_eds
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+skinparam entity<<GOLD_PILOTAGE>> {
+    BackgroundColor #E8F8F5
+    BorderColor #16A085
+    HeaderBackgroundColor #A3E4D7
+}
+
+skinparam entity<<GOLD_RECHERCHE>> {
+    BackgroundColor #FEF9E7
+    BorderColor #F39C12
+    HeaderBackgroundColor #F9E79F
+}
+
+title Couche GOLD : Datamarts Métier pour Metabase (Pilotage & Recherche)
+
+package "Couche GOLD (ClickHouse)" #FEF9E7 {
+
+    ' --------------------------------------------------------------------------
+    ' 1. PILOTAGE HOSPITALIER
+    ' --------------------------------------------------------------------------
+    package "🏥 Datamarts Pilotage Hospitalier" #E8F8F5 {
+        
+        entity "gold.vue_pilotage_dms" as g_dms <<GOLD_PILOTAGE>> {
+            * service_code : String
+            * mois_admission : Date
+            --
+            service_label : String
+            nb_sejours_termines : UInt64
+            nb_sejours_en_cours : UInt64
+            dms_jours : Float64
+            dms_mediane_jours : Float64
+            dms_min_jours : Float64
+            dms_max_jours : Float64
+        }
+
+        entity "gold.vue_pilotage_urgences" as g_urg <<GOLD_PILOTAGE>> {
+            * date_passage : Date
+            --
+            nb_passages_total : UInt64
+            nb_urgences_directes : UInt64
+            nb_sorties_domicile : UInt64
+            nb_mutations_internes : UInt64
+            nb_transferts_externes : UInt64
+            nb_deces : UInt64
+            nb_patients_actuellement_presents : UInt64
+        }
+
+        entity "gold.vue_pilotage_readmissions_30j" as g_readm <<GOLD_PILOTAGE>> {
+            * mois : Date
+            --
+            nb_sejours_total : UInt64
+            nb_readmissions_30j : UInt64
+            taux_readmission_pct : Float64
+        }
+
+        entity "gold.vue_pilotage_alertes" as g_alt <<GOLD_PILOTAGE>> {
+            * jour : Date
+            * service_code : String
+            --
+            service_label : String
+            nb_mesures_totales : UInt64
+            nb_alertes_totales : UInt64
+            nb_alertes_fc : UInt64
+            nb_alertes_spo2 : UInt64
+            nb_alertes_temp : UInt64
+            taux_alertes_pct : Float64
+        }
+    }
+
+    ' --------------------------------------------------------------------------
+    ' 2. RECHERCHE CLINIQUE (RGPD SEUIL >= 5)
+    ' --------------------------------------------------------------------------
+    package "🔬 Datamarts Recherche Clinique (RGPD : Seuil ≥ 5)" #FEF9E7 {
+
+        entity "gold.vue_recherche_prevalence" as g_prev <<GOLD_RECHERCHE>> {
+            * code_cim10 : String
+            --
+            libelle_pathologie : String
+            nb_patients_uniques : Nullable(UInt64) ' Masqué si < 5
+            nb_diagnostics_total : Nullable(UInt64) ' Masqué si < 5
+            nb_diagnostic_principal : UInt64
+            nb_diagnostic_associe : UInt64
+        }
+
+        entity "gold.vue_recherche_cohortes" as g_coh <<GOLD_RECHERCHE>> {
+            * code_cim10 : String
+            * tranche_age : String
+            * sex : String
+            --
+            libelle_pathologie : String
+            nb_patients : UInt64 ' Filtré STRICTEMENT avec nb_patients >= 5
+        }
+    }
+}
+
+@enduml

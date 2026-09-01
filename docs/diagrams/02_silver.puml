@@ -1,0 +1,98 @@
+@startuml silver_schema_eds
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+skinparam entity<<FACT>> {
+    BackgroundColor #FDEDEC
+    BorderColor #E74C3C
+    HeaderBackgroundColor #FADBD8
+}
+
+skinparam entity<<DIMENSION>> {
+    BackgroundColor #EBF5FB
+    BorderColor #2980B9
+    HeaderBackgroundColor #D4E6F1
+}
+
+title Couche SILVER : Vision Macro (3 Facts Indépendants & Dimensions)
+
+package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
+
+    ' ==========================================================================
+    ' LES DIMENSIONS
+    ' ==========================================================================
+    package "DIMENSIONS" #EBF5FB {
+        entity "silver.dim_patients" as dim_patients <<DIMENSION>> {
+            + **patient_pseudo_id** : String <<PK>>
+            --
+            birth_year : UInt16
+            sex : String
+            region_code : String
+        }
+
+        entity "silver.dim_services" as dim_services <<DIMENSION>> {
+            + **service_code** : String <<PK>>
+            --
+            service_label : String
+        }
+
+        entity "silver.dim_cim10" as dim_cim10 <<DIMENSION>> {
+            + **code_cim10** : String <<PK>>
+            --
+            libelle : String
+        }
+    }
+
+    ' ==========================================================================
+    ' 3 TABLES DE FAITS (FACTS INDÉPENDANTS)
+    ' ==========================================================================
+    package "3 TABLES DE FAITS (FACTS)" #FDEDEC {
+
+        ' FACT 1 : Séjours
+        entity "silver.fact_sejours" as fact_sejours <<FACT>> {
+            + **stay_id** : String <<PK>>
+            --
+            # patient_pseudo_id : String <<FK>>
+            # service_code : String <<FK>>
+            admission_ts : DateTime
+            discharge_ts : Nullable(DateTime)
+            admission_mode : String
+            discharge_mode : String
+            is_ongoing : UInt8
+            duree_sejour_jours : Nullable(Float32)
+        }
+
+        ' FACT 2 : Diagnostics
+        entity "silver.fact_diagnostics" as fact_diagnostics <<FACT>> {
+            + **stay_id** : String
+            + **code_cim10** : String <<FK>>
+            --
+            diag_type : String
+            libelle_cim10 : String
+        }
+
+        ' FACT 3 : Monitoring
+        entity "silver.fact_monitoring" as fact_monitoring <<FACT>> {
+            + **stay_id** : String
+            + **ts** : DateTime
+            --
+            heart_rate : Nullable(Int16)
+            spo2 : Nullable(Int16)
+            temp_c : Nullable(Float32)
+            is_alert : UInt8
+        }
+    }
+}
+
+' ==============================================================================
+' RELATIONS DIMENSIONNELLES UNIQUEMENT (Pas de lien entre Facts)
+' ==============================================================================
+dim_patients ||--o{ fact_sejours : "dim_patients"
+dim_services ||--o{ fact_sejours : "dim_services"
+
+dim_cim10    ||--o{ fact_diagnostics : "dim_cim10"
+
+@enduml

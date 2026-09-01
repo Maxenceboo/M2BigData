@@ -1,0 +1,29 @@
+# Environnements virtuels
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Données & Logs locaux
+lake/.sync_manifest.json
+*.log
+
+# Docker persistant
+.clickhouse-data/
+.metabase-data/
+
+# Fichier de suivi local
+TODO.md
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

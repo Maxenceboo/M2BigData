@@ -1,0 +1,83 @@
+@startuml architecture_eds
+!theme plain
+skinparam componentStyle rectangle
+skinparam roundcorner 5
+
+title Architecture Médaillon de l'Entrepôt de Données de Santé (EDS)
+
+cloud "Source CHU (Lecture Seule)" as sources {
+    folder "source-filestorage/" as sfs {
+        [patients.csv (Identifiants réels)] as f_pat
+        [sejours.csv] as f_sej
+        [diagnostics.json] as f_dia
+        [monitoring.parquet] as f_mon
+        [referentiels/*.csv] as f_ref
+    }
+}
+
+package "SAS / Lake (Staging)" #FFF8E7 {
+    component "Module de Pseudonymisation & Sécurité\n- Hash HMAC-SHA256 (patient_id + SALT)\n- Suppression NIR / Nom / Prénom\n- Généralisation date de naissance -> Année" as anonymizer #FFE4B5
+    folder "lake/<AAAA-MM-JJ>/" as lake {
+        [patients_clean.csv] as l_pat
+        [sejours_clean.csv] as l_sej
+        [diagnostics.json] as l_dia
+        [monitoring.parquet] as l_mon
+        [referentiels/*.csv] as l_ref
+    }
+}
+
+package "Entrepôt de Données ClickHouse" #E8F8F5 {
+    package "Couche BRONZE (Tables Brutes Typées)" #EBF5FB {
+        database "bronze.patients" as b_pat
+        database "bronze.sejours" as b_sej
+        database "bronze.diagnostics" as b_dia
+        database "bronze.monitoring" as b_mon
+        database "bronze.ref_*" as b_ref
+    }
+
+    package "Couche SILVER (Nettoyé, Dédupliqué, Qualité)" #D4EFDF {
+        database "silver.patients\n(Dédupliqué)" as s_pat
+        database "silver.sejours\n(Cohérence dates, séjours en cours)" as s_sej
+        database "silver.diagnostics\n(Aplatissement JSON)" as s_dia
+        database "silver.monitoring\n(Filtre bornes FC/SpO2/Temp + Alertes)" as s_mon
+        database "silver.rejets\n(Traçabilité anomalies)" as s_rej
+    }
+
+    package "Couche GOLD (Datamarts & Vues Métier)" #FCF3CF {
+        database "gold.vue_pilotage_*" as g_pil
+        database "gold.vue_recherche_*\n(RGPD: Seuil effectif >= 5)" as g_rec
+    }
+}
+
+package "Restitution & Visualisation (Metabase)" #FDEDEC {
+    [Dashboard Pilotage Hospitalier\n- DMS par service\n- Flux Urgences\n- Réadmissions 30j\n- Alertes constantes] as dash_pil #FADBD8
+    [Dashboard Recherche Clinique\n- Prévalence CIM-10\n- Cohortes Âge / Sexe\n- Cloisonnement d'accès] as dash_rec #D6EAF8
+}
+
+' Flux
+sfs -down-> anonymizer : Lecture seule
+anonymizer -down-> lake : Écriture anonymisée
+
+lake -down-> b_pat
+lake -down-> b_sej
+lake -down-> b_dia
+lake -down-> b_mon
+lake -down-> b_ref
+
+b_pat -down-> s_pat : SQL ReplacingMergeTree
+b_sej -down-> s_sej : SQL Validation dates
+b_dia -down-> s_dia : SQL Flattening
+b_mon -down-> s_mon : SQL Bornes physiologiques
+
+b_sej ..> s_rej : Écarte discharge < admission
+b_mon ..> s_rej : Écarte FC/SpO2/Temp aberrants
+
+s_sej -down-> g_pil : Agrégations SQL
+s_mon -down-> g_pil : Agrégations SQL
+s_dia -down-> g_rec : Agrégations SQL
+s_pat -down-> g_rec : Agrégations SQL
+
+g_pil -down-> dash_pil
+g_rec -down-> dash_rec
+
+@enduml

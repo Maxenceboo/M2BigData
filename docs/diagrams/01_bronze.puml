@@ -1,0 +1,86 @@
+@startuml bronze_schema_eds
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+skinparam entity<<BRONZE>> {
+    BackgroundColor #F6DDCC
+    BorderColor #D35400
+    HeaderBackgroundColor #EDBB99
+}
+
+title Couche BRONZE : Tables Brutes Typées (Ingestion Lake)
+
+package "Couche BRONZE (ClickHouse)" #FBEEE6 {
+    
+    entity "bronze.patients" as b_pat <<BRONZE>> {
+        * patient_pseudo_id : String
+        --
+        birth_year : UInt16
+        sex : String
+        region_code : String
+        -- [Métadonnées d'Ingestion] --
+        source_date : Date
+        source_file : String
+        ingested_at : DateTime
+    }
+
+    entity "bronze.sejours" as b_sej <<BRONZE>> {
+        * stay_id : String
+        --
+        patient_pseudo_id : String
+        service_code : String
+        admission_ts : DateTime
+        discharge_ts : Nullable(DateTime)
+        admission_mode : String
+        discharge_mode : String
+        -- [Métadonnées d'Ingestion] --
+        source_date : Date
+        source_file : String
+        ingested_at : DateTime
+    }
+
+    entity "bronze.diagnostics" as b_dia <<BRONZE>> {
+        * stay_id : String
+        * code_cim10 : String
+        --
+        diag_type : String
+        -- [Métadonnées d'Ingestion] --
+        source_date : Date
+        source_file : String
+        ingested_at : DateTime
+    }
+
+    entity "bronze.monitoring" as b_mon <<BRONZE>> {
+        * stay_id : String
+        * ts : DateTime
+        --
+        heart_rate : Nullable(Int16)
+        spo2 : Nullable(Int16)
+        temp_c : Nullable(Float32)
+        -- [Métadonnées d'Ingestion] --
+        source_date : Date
+        source_file : String
+        ingested_at : DateTime
+    }
+
+    entity "bronze.ref_services" as b_refs <<BRONZE>> {
+        * service_code : String
+        --
+        service_label : String
+        source_file : String
+        ingested_at : DateTime
+    }
+
+    entity "bronze.ref_cim10" as b_refc <<BRONZE>> {
+        * code_cim10 : String
+        --
+        libelle : String
+        source_file : String
+        ingested_at : DateTime
+    }
+}
+
+@enduml
