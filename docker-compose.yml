@@ -1,0 +1,34 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: eds_clickhouse
+    restart: unless-stopped
+    ports:
+      - "8123:8123" # HTTP interface & Web SQL Client (:8123/play)
+      - "9000:9000" # Native TCP client
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: eds_metabase
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase_data:/metabase-data
+    depends_on:
+      - clickhouse
+
+volumes:
+  clickhouse_data:
+  metabase_data:
