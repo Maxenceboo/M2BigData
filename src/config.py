@@ -17,3 +17,10 @@ ANONYMIZATION_SALT = os.getenv("EDS_SALT", "CHU_SECRET_SALT_2026_RGPD_KEY_SECURE
 
 # Format du préfixe des identifiants pseudonymisés
 PSEUDO_PREFIX = "PSEUDO_"
+
+# Paramètres de connexion ClickHouse
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "localhost")
+CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", "8123"))
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
+
