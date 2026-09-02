@@ -155,6 +155,13 @@ def setup_metabase_users():
     else:
         print(f"  [INFO] Groupe existant : {grp_rech['name']} (id: {grp_rech['id']})")
 
+    grp_dim = next((g for g in groups if g["name"] == "DIM & Facturation T2A"), None)
+    if not grp_dim:
+        grp_dim = _mb_post("/api/permissions/group", {"name": "DIM & Facturation T2A"}, token)
+        print(f"  [+] Groupe créé : {grp_dim['name']} (id: {grp_dim['id']})")
+    else:
+        print(f"  [INFO] Groupe existant : {grp_dim['name']} (id: {grp_dim['id']})")
+
     # 2. Utilisateurs
     users = _mb_get("/api/user", token)["data"]
 
@@ -184,8 +191,21 @@ def setup_metabase_users():
     else:
         print(f"  [INFO] Utilisateur existant : {u_rech['email']}")
 
+    # Responsable DIM (Évolution T2A)
+    u_dim = next((u for u in users if u["email"] == "dim@eds-chu.fr"), None)
+    if not u_dim:
+        u_dim = _mb_post("/api/user", {
+            "first_name": "Responsable",
+            "last_name": "DIM",
+            "email": "dim@eds-chu.fr",
+            "password": "DimPassword123!"
+        }, token)
+        print(f"  [+] Utilisateur créé : {u_dim['email']}")
+    else:
+        print(f"  [INFO] Utilisateur existant : {u_dim['email']}")
+
     # 3. Adhésion aux Groupes (Memberships)
-    for grp_id, usr_id in [(grp_dir["id"], u_dir["id"]), (grp_rech["id"], u_rech["id"])]:
+    for grp_id, usr_id in [(grp_dir["id"], u_dir["id"]), (grp_rech["id"], u_rech["id"]), (grp_dim["id"], u_dim["id"])]:
         try:
             _mb_post("/api/permissions/membership", {"group_id": grp_id, "user_id": usr_id}, token)
         except Exception:
@@ -195,28 +215,40 @@ def setup_metabase_users():
     collections = _mb_get("/api/collection", token)
     col_p = next((c for c in collections if not c.get("personal_owner_id") and "Pilotage" in c["name"]), None)
     col_r = next((c for c in collections if not c.get("personal_owner_id") and "Recherche" in c["name"]), None)
+    col_t = next((c for c in collections if not c.get("personal_owner_id") and "T2A" in c["name"]), None)
 
     if col_p and col_r:
         graph = _mb_get("/api/collection/graph", token)
         c_p_id = str(col_p["id"])
         c_r_id = str(col_r["id"])
+        c_t_id = str(col_t["id"]) if col_t else None
         g_all_id = "1"
         g_dir_id = str(grp_dir["id"])
         g_rech_id = str(grp_rech["id"])
+        g_dim_id = str(grp_dim["id"])
 
         if g_all_id in graph["groups"]:
             graph["groups"][g_all_id]["root"] = "none"
             graph["groups"][g_all_id][c_p_id] = "none"
             graph["groups"][g_all_id][c_r_id] = "none"
+            if c_t_id:
+                graph["groups"][g_all_id][c_t_id] = "none"
 
-        graph["groups"][g_dir_id] = {"root": "read", c_p_id: "read", c_r_id: "none"}
-        graph["groups"][g_rech_id] = {"root": "read", c_p_id: "none", c_r_id: "read"}
+        # Direction : Accès EXCLUSIF à Pilotage Hospitalier
+        graph["groups"][g_dir_id] = {"root": "read", c_p_id: "read", c_r_id: "none", c_t_id: "none"}
+
+        # Recherche : Accès EXCLUSIF à Recherche Clinique
+        graph["groups"][g_rech_id] = {"root": "read", c_p_id: "none", c_r_id: "read", c_t_id: "none"}
+
+        # DIM : Accès EXCLUSIF à Facturation T2A & Plateau Technique
+        graph["groups"][g_dim_id] = {"root": "read", c_p_id: "none", c_r_id: "none", c_t_id: "read"}
 
         try:
             _mb_put("/api/collection/graph", graph, token)
-            print("  [OK] Cloisonnement strict validé dans l'arbre des permissions :")
+            print("  [OK] Cloisonnement strict 100% exclusif validé dans l'arbre des permissions :")
             print("       • 'Direction & Pilotage' -> Accès EXCLUSIF à '🏥 Pilotage Hospitalier'")
             print("       • 'Recherche Clinique'  -> Accès EXCLUSIF à '🔬 Recherche Clinique'")
+            print("       • 'DIM & Facturation T2A' -> Accès EXCLUSIF à '💰 Facturation T2A & Plateau Technique'")
         except Exception as e:
             print(f"  [WARN] Note sur les permissions : {e}")
 

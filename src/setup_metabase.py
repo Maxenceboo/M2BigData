@@ -167,6 +167,14 @@ def main():
             "description": "Données épidémiologiques et cohortes pseudonymisées conformes RGPD (seuil >= 5)"
         }, token)
 
+    col_t2a = next((c for c in collections if not c.get("personal_owner_id") and "T2A" in c["name"]), None)
+    if not col_t2a:
+        col_t2a = api_post("/api/collection", {
+            "name": "💰 Facturation T2A & Plateau Technique",
+            "color": "#2980B9",
+            "description": "Valorisation financière T2A, cotation CCAM et saturation des plateaux pour le DIM"
+        }, token)
+
     existing_cards = api_get("/api/card", token)
     dashboards = api_get("/api/dashboard", token)
 
@@ -347,6 +355,111 @@ def main():
         collection_id=col_pilotage["id"], db_id=db_id, token=token, existing_cards=existing_cards
     )
 
+    # -------------------------------------------------------------------------
+    # 💰 ÉVOLUTION : PLATEAU TECHNIQUE & FACTURATION T2A
+    # -------------------------------------------------------------------------
+    # KPI 5 : Volume Total d'Actes
+    c_p_kpi_actes = create_or_update_card(
+        name="KPI - Total Actes Médicaux Réalisés",
+        display="scalar",
+        sql="SELECT sum(nb_actes_total) AS total_actes FROM gold.vue_pilotage_actes_services",
+        viz_settings={"scalar.field": "total_actes"},
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
+    # KPI 6 : Montant Facturé T2A
+    c_p_kpi_t2a = create_or_update_card(
+        name="KPI - Montant Total Facturé T2A (€)",
+        display="scalar",
+        sql="SELECT sum(montant_total_t2a_euros) AS total_t2a FROM gold.vue_pilotage_facturation_t2a",
+        viz_settings={"scalar.field": "total_t2a"},
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
+    # KPI 7 : Densité Moyenne Plateau
+    c_p_kpi_dens = create_or_update_card(
+        name="KPI - Densité Moyenne d'Actes par Lit",
+        display="scalar",
+        sql="SELECT round(avgIf(densite_actes_par_lit, capacite_lits > 0), 1) AS densite_moyenne FROM gold.vue_pilotage_densite_plateau",
+        viz_settings={"scalar.field": "densite_moyenne"},
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
+    # Graphique 6 : Top CCAM (Barres horizontales)
+    c_p_top_ccam = create_or_update_card(
+        name="Palmarès des Actes CCAM les plus Fréquents",
+        display="row",
+        sql="""
+        SELECT 
+            libelle_acte AS "Acte Médical",
+            nb_actes_total AS "Nombre d'actes"
+        FROM gold.vue_pilotage_actes_ccam 
+        ORDER BY nb_actes_total DESC
+        """,
+        viz_settings={
+            "graph.colors": ["#16A085"],
+            "graph.x_axis.title_text": "Nombre d'actes",
+            "graph.y_axis.title_text": "Acte CCAM"
+        },
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
+    # Graphique 7 : Facturation T2A par Service (Barres)
+    c_p_t2a_bar = create_or_update_card(
+        name="Valorisation Financière T2A par Service (€)",
+        display="bar",
+        sql="""
+        SELECT 
+            service_label AS "Service",
+            montant_total_t2a_euros AS "Montant T2A (€)"
+        FROM gold.vue_pilotage_facturation_t2a 
+        ORDER BY montant_total_t2a_euros DESC
+        """,
+        viz_settings={
+            "graph.colors": ["#2980B9"],
+            "graph.x_axis.title_text": "Service",
+            "graph.y_axis.title_text": "Montant Total Facturé (€)"
+        },
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
+    # Tableau 2 : Activité et DMS par Catégorie de Service
+    c_p_cat_table = create_or_update_card(
+        name="Activité & DMS par Catégorie de Service",
+        display="table",
+        sql="""
+        SELECT 
+            categorie AS "Catégorie",
+            pole AS "Pôle Hospitalier",
+            nb_sejours_termines AS "Séjours Clôturés",
+            dms_jours AS "DMS (jours)"
+        FROM gold.vue_pilotage_categories 
+        ORDER BY nb_sejours_termines DESC
+        """,
+        viz_settings={},
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
+    # Graphique 8 : Intensité plateau technique (Densité par lit)
+    c_p_dens_chart = create_or_update_card(
+        name="Intensité d'Activité sur le Plateau Technique (Actes / Lit)",
+        display="bar",
+        sql="""
+        SELECT 
+            service_label AS "Service",
+            densite_actes_par_lit AS "Actes / Lit"
+        FROM gold.vue_pilotage_densite_plateau 
+        WHERE capacite_lits > 0
+        ORDER BY densite_actes_par_lit DESC
+        """,
+        viz_settings={
+            "graph.colors": ["#E67E22"],
+            "graph.x_axis.title_text": "Service Hospitalier",
+            "graph.y_axis.title_text": "Ratio Actes / Lit"
+        },
+        collection_id=col_t2a["id"], db_id=db_id, token=token, existing_cards=existing_cards
+    )
+
     # Assemblage Dashboard Pilotage
     dashcards_pilotage = [
         # Bannière Markdown
@@ -398,7 +511,7 @@ def main():
     ]
 
     api_put(f"/api/dashboard/{dash_pilotage['id']}", {"dashcards": dashcards_pilotage}, token)
-    print("  [OK] Dashboard Pilotage Hospitalier entièrement restructuré et stylisé.")
+    print("  [OK] Dashboard Pilotage Hospitalier (Direction) restructuré et centré sur son périmètre.")
 
 
     # =========================================================================
@@ -566,7 +679,63 @@ def main():
     api_put(f"/api/dashboard/{dash_recherche['id']}", {"dashcards": dashcards_recherche}, token)
     print("  [OK] Dashboard Recherche Clinique entièrement restructuré et stylisé.")
 
-    # 3. Utilisateurs, groupes et cloisonnement des droits
+
+    # =========================================================================
+    # 💰 3. DASHBOARD FACTURATION T2A & PLATEAU TECHNIQUE (DIM)
+    # =========================================================================
+    print("\n" + "-" * 70)
+    print("💰 DESIGN & MISE EN PAGE : DASHBOARD FACTURATION T2A & PLATEAU TECHNIQUE (DIM)")
+    print("-" * 70)
+
+    dash_t2a = next((d for d in dashboards if "T2A" in d["name"] or "Facturation" in d["name"]), None)
+    if not dash_t2a:
+        dash_t2a = api_post("/api/dashboard", {
+            "name": "Tableau de Bord - Facturation T2A & Plateau Technique",
+            "description": "Pilotage médico-économique des actes CCAM, tarification T2A et saturation des plateaux pour le DIM",
+            "collection_id": col_t2a["id"]
+        }, token)
+
+    dashcards_t2a = [
+        # Bannière Markdown
+        {
+            "id": -1, "card_id": None, "row": 0, "col": 0, "size_x": 24, "size_y": 2,
+            "visualization_settings": {
+                "virtual_card": {"display": "text"},
+                "text": "# 💰 Département d'Information Médicale (DIM) — Facturation T2A & Plateau Technique\n*Suivi exhaustif des actes médicaux codés en CCAM, valorisation financière T2A et densité d'activité par lit.*"
+            }
+        },
+        # 3 KPI Scorecards
+        {"id": -2, "card_id": c_p_kpi_actes["id"], "row": 2, "col": 0, "size_x": 8, "size_y": 3, "visualization_settings": {}},
+        {"id": -3, "card_id": c_p_kpi_t2a["id"], "row": 2, "col": 8, "size_x": 8, "size_y": 3, "visualization_settings": {}},
+        {"id": -4, "card_id": c_p_kpi_dens["id"], "row": 2, "col": 16, "size_x": 8, "size_y": 3, "visualization_settings": {}},
+
+        # Section 1 : Cotation CCAM & Recettes
+        {
+            "id": -5, "card_id": None, "row": 5, "col": 0, "size_x": 24, "size_y": 1,
+            "visualization_settings": {
+                "virtual_card": {"display": "text"},
+                "text": "### 📋 Cotation CCAM & Recettes T2A par Pôle et Service"
+            }
+        },
+        {"id": -6, "card_id": c_p_top_ccam["id"], "row": 6, "col": 0, "size_x": 12, "size_y": 9, "visualization_settings": {}},
+        {"id": -7, "card_id": c_p_t2a_bar["id"], "row": 6, "col": 12, "size_x": 12, "size_y": 9, "visualization_settings": {}},
+
+        # Section 2 : Activité Plateau
+        {
+            "id": -8, "card_id": None, "row": 15, "col": 0, "size_x": 24, "size_y": 1,
+            "visualization_settings": {
+                "virtual_card": {"display": "text"},
+                "text": "### 🏥 Intensité du Plateau Technique & Activité par Catégorie"
+            }
+        },
+        {"id": -9, "card_id": c_p_cat_table["id"], "row": 16, "col": 0, "size_x": 12, "size_y": 9, "visualization_settings": {}},
+        {"id": -10, "card_id": c_p_dens_chart["id"], "row": 16, "col": 12, "size_x": 12, "size_y": 9, "visualization_settings": {}}
+    ]
+
+    api_put(f"/api/dashboard/{dash_t2a['id']}", {"dashcards": dashcards_t2a}, token)
+    print("  [OK] Dashboard Facturation T2A & Plateau Technique (DIM) entièrement déployé et stylisé.")
+
+    # 4. Utilisateurs, groupes et cloisonnement des droits
     setup_metabase_users()
 
     print("\n" + "=" * 70)
@@ -576,6 +745,7 @@ def main():
     print("• Admin :      admin@eds-chu.fr     / AdminPassword123!")
     print("• Direction :  directeur@eds-chu.fr / DirecteurPassword123!")
     print("• Chercheur :  chercheur@eds-chu.fr / ChercheurPassword123!")
+    print("• DIM / T2A :  dim@eds-chu.fr       / DimPassword123!")
     print("=" * 70)
 
 
