@@ -11,20 +11,32 @@ skinparam entity<<FACT>> {
     HeaderBackgroundColor #FADBD8
 }
 
+skinparam entity<<FACT_NEW>> {
+    BackgroundColor #FADBD8
+    BorderColor #C0392B
+    HeaderBackgroundColor #F1948A
+}
+
 skinparam entity<<DIMENSION>> {
     BackgroundColor #EBF5FB
     BorderColor #2980B9
     HeaderBackgroundColor #D4E6F1
 }
 
-title Couche SILVER : Vision Macro (3 Facts Indépendants & Dimensions)
+skinparam entity<<DIMENSION_EVOL>> {
+    BackgroundColor #E8F8F5
+    BorderColor #16A085
+    HeaderBackgroundColor #A3E4D7
+}
 
-package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
+title Couche SILVER (Évolution Lot 2026-08-29) : 4 Facts Indépendants & 4 Dimensions (Star Schema)
+
+package "Couche SILVER (Entrepôt Nettoyé & Structuré)" #FAFAFA {
 
     ' ==========================================================================
-    ' LES DIMENSIONS
+    ' LES 4 DIMENSIONS
     ' ==========================================================================
-    package "DIMENSIONS" #EBF5FB {
+    package "4 DIMENSIONS" #EBF5FB {
         entity "silver.dim_patients" as dim_patients <<DIMENSION>> {
             + **patient_pseudo_id** : String <<PK>>
             --
@@ -33,10 +45,13 @@ package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
             region_code : String
         }
 
-        entity "silver.dim_services" as dim_services <<DIMENSION>> {
+        entity "silver.dim_services" as dim_services <<DIMENSION_EVOL>> {
             + **service_code** : String <<PK>>
             --
             service_label : String
+            categorie : LowCardinality(String) [Évolution]
+            capacite_lits : UInt16 [Évolution]
+            pole : LowCardinality(String) [Évolution]
         }
 
         entity "silver.dim_cim10" as dim_cim10 <<DIMENSION>> {
@@ -44,12 +59,19 @@ package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
             --
             libelle : String
         }
+
+        entity "silver.dim_ccam" as dim_ccam <<DIMENSION_EVOL>> {
+            + **code_ccam** : String <<PK>>
+            --
+            libelle : String
+            tarif_euros : UInt32
+        }
     }
 
     ' ==========================================================================
-    ' 3 TABLES DE FAITS (FACTS INDÉPENDANTS)
+    ' LES 4 TABLES DE FAITS (FACTS INDÉPENDANTS)
     ' ==========================================================================
-    package "3 TABLES DE FAITS (FACTS)" #FDEDEC {
+    package "4 TABLES DE FAITS (FACTS INDÉPENDANTS)" #FDEDEC {
 
         ' FACT 1 : Séjours
         entity "silver.fact_sejours" as fact_sejours <<FACT>> {
@@ -90,18 +112,33 @@ package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
             is_alert_temp : UInt8
             alert_reasons : String
         }
+
+        ' FACT 4 : Actes Médicaux (NOUVEAU)
+        entity "silver.fact_acte" as fact_acte <<FACT_NEW>> {
+            + **acte_id** : UUID <<PK>>
+            --
+            stay_id : String
+            # patient_pseudo_id : String <<FK>>
+            # service_code : String <<FK>>
+            # code_ccam : String <<FK>>
+            acte_ts : DateTime
+        }
     }
 }
 
 ' ==============================================================================
-' RELATIONS DIMENSIONNELLES UNIQUEMENT (Pas de lien entre Facts)
+' RELATIONS DIMENSIONNELLES (Star Schema : Relations Facts <-> Dimensions)
 ' ==============================================================================
-dim_patients ||--o{ fact_sejours : "dim_patients"
-dim_services ||--o{ fact_sejours : "dim_services"
+dim_patients ||--o{ fact_sejours : "1 patient : N séjours"
+dim_services ||--o{ fact_sejours : "1 service : N séjours"
 
-dim_patients ||--o{ fact_diagnostics : "dim_patients"
-dim_cim10    ||--o{ fact_diagnostics : "dim_cim10"
+dim_patients ||--o{ fact_diagnostics : "1 patient : N diagnostics"
+dim_cim10    ||--o{ fact_diagnostics : "1 code CIM : N diagnostics"
 
-dim_services ||--o{ fact_monitoring : "dim_services"
+dim_services ||--o{ fact_monitoring : "1 service : N mesures"
+
+dim_services ||--o{ fact_acte : "1 service : N actes"
+dim_ccam     ||--o{ fact_acte : "1 code CCAM : N actes"
+dim_patients ||--o{ fact_acte : "1 patient : N actes"
 
 @enduml

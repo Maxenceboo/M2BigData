@@ -11,32 +11,37 @@ skinparam entity<<GOLD_PILOTAGE>> {
     HeaderBackgroundColor #A3E4D7
 }
 
+skinparam entity<<GOLD_T2A>> {
+    BackgroundColor #EBF5FB
+    BorderColor #2980B9
+    HeaderBackgroundColor #AED6F1
+}
+
 skinparam entity<<GOLD_RECHERCHE>> {
     BackgroundColor #FEF9E7
     BorderColor #F39C12
     HeaderBackgroundColor #F9E79F
 }
 
-title Couche GOLD : Datamarts Métier pour Metabase (Pilotage & Recherche)
+title Couche GOLD : Datamarts Métier pour Metabase (Évolution Lot 2026-08-29)
 
-package "Couche GOLD (ClickHouse)" #FEF9E7 {
+package "Couche GOLD (Vues Analytiques ClickHouse - SQL SECURITY DEFINER)" #FAFAFA {
 
     ' --------------------------------------------------------------------------
-    ' 1. PILOTAGE HOSPITALIER
+    ' 1. PILOTAGE HOSPITALIER CLASSIQUE
     ' --------------------------------------------------------------------------
     package "🏥 Datamarts Pilotage Hospitalier" #E8F8F5 {
         
         entity "gold.vue_pilotage_dms" as g_dms <<GOLD_PILOTAGE>> {
             * service_code : String
-            * mois_admission : Date
             --
             service_label : String
+            categorie : String [Évolution]
+            pole : String [Évolution]
             nb_sejours_termines : UInt64
             nb_sejours_en_cours : UInt64
             dms_jours : Float64
             dms_mediane_jours : Float64
-            dms_min_jours : Float64
-            dms_max_jours : Float64
         }
 
         entity "gold.vue_pilotage_urgences" as g_urg <<GOLD_PILOTAGE>> {
@@ -48,11 +53,10 @@ package "Couche GOLD (ClickHouse)" #FEF9E7 {
             nb_mutations_internes : UInt64
             nb_transferts_externes : UInt64
             nb_deces : UInt64
-            nb_patients_actuellement_presents : UInt64
+            taux_hospitalisation_pct : Float64
         }
 
         entity "gold.vue_pilotage_readmissions_30j" as g_readm <<GOLD_PILOTAGE>> {
-            * mois : Date
             --
             nb_sejours_total : UInt64
             nb_readmissions_30j : UInt64
@@ -61,9 +65,7 @@ package "Couche GOLD (ClickHouse)" #FEF9E7 {
 
         entity "gold.vue_pilotage_alertes" as g_alt <<GOLD_PILOTAGE>> {
             * jour : Date
-            * service_code : String
             --
-            service_label : String
             nb_mesures_totales : UInt64
             nb_alertes_totales : UInt64
             nb_alertes_fc : UInt64
@@ -74,7 +76,64 @@ package "Couche GOLD (ClickHouse)" #FEF9E7 {
     }
 
     ' --------------------------------------------------------------------------
-    ' 2. RECHERCHE CLINIQUE (RGPD SEUIL >= 5)
+    ' 2. MÉDICO-ÉCONOMIQUE & PLATEAU TECHNIQUE (NOUVEAU - LOT 2026-08-29)
+    ' --------------------------------------------------------------------------
+    package "💰 Datamarts Actes, Plateau Technique & T2A (Évolution)" #EBF5FB {
+
+        ' KPI 1 : Activité et DMS par catégorie
+        entity "gold.vue_pilotage_categories" as g_cat <<GOLD_T2A>> {
+            * categorie : String
+            --
+            pole : String
+            nb_sejours_termines : UInt64
+            dms_jours : Float64
+        }
+
+        ' KPI 2 : Nombre d'actes par service & moyenne par séjour
+        entity "gold.vue_pilotage_actes_services" as g_act_serv <<GOLD_T2A>> {
+            * service_code : String
+            --
+            service_label : String
+            categorie : String
+            pole : String
+            nb_actes_total : UInt64
+            nb_sejours_concernes : UInt64
+            moyenne_actes_par_sejour : Float64
+        }
+
+        ' KPI 3 : Nombre d'actes par type d'acte (CCAM)
+        entity "gold.vue_pilotage_actes_ccam" as g_act_ccam <<GOLD_T2A>> {
+            * code_ccam : String
+            --
+            libelle_acte : String
+            nb_actes_total : UInt64
+            tarif_unitaire_euros : UInt32
+            montant_total_euros : UInt64
+        }
+
+        ' KPI 4 : Densité d'actes par lit (Intensité plateau technique)
+        entity "gold.vue_pilotage_densite_plateau" as g_dens <<GOLD_T2A>> {
+            * service_code : String
+            --
+            service_label : String
+            capacite_lits : UInt16
+            nb_actes_total : UInt64
+            densite_actes_par_lit : Float64
+        }
+
+        ' KPI 5 : Montant facturé par service (T2A)
+        entity "gold.vue_pilotage_facturation_t2a" as g_t2a <<GOLD_T2A>> {
+            * service_code : String
+            --
+            service_label : String
+            categorie : String
+            pole : String
+            montant_total_t2a_euros : UInt64
+        }
+    }
+
+    ' --------------------------------------------------------------------------
+    ' 3. RECHERCHE CLINIQUE (RGPD SEUIL >= 5)
     ' --------------------------------------------------------------------------
     package "🔬 Datamarts Recherche Clinique (RGPD : Seuil ≥ 5)" #FEF9E7 {
 
@@ -82,8 +141,8 @@ package "Couche GOLD (ClickHouse)" #FEF9E7 {
             * code_cim10 : String
             --
             libelle_pathologie : String
-            nb_patients_uniques : Nullable(UInt64) ' Masqué si < 5
-            nb_diagnostics_total : Nullable(UInt64) ' Masqué si < 5
+            nb_patients_uniques : UInt64
+            nb_diagnostics_total : UInt64
             nb_diagnostic_principal : UInt64
             nb_diagnostic_associe : UInt64
         }
@@ -94,7 +153,14 @@ package "Couche GOLD (ClickHouse)" #FEF9E7 {
             * sex : String
             --
             libelle_pathologie : String
-            nb_patients : UInt64 ' Filtré STRICTEMENT avec nb_patients >= 5
+            nb_patients : UInt64
+        }
+
+        entity "gold.vue_recherche_synthese" as g_synth <<GOLD_RECHERCHE>> {
+            --
+            nb_patients_total : UInt64
+            nb_diagnostics_total : UInt64
+            nb_pathologies_surveillees : UInt64
         }
     }
 }

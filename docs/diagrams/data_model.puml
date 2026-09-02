@@ -29,47 +29,67 @@ skinparam entity<<GOLD>> {
     HeaderBackgroundColor #A3E4D7
 }
 
-title Modèle de Données EDS - Vision Macro (Bronze -> Silver -> Gold)
+title Modèle de Données EDS - Architecture Complète Médaillon (Évolution Lot 2026-08-29)
 
-package "1. COUCHE BRONZE" #FBEEE6 {
+package "1. COUCHE BRONZE (Données Brutes Ingestées)" #FBEEE6 {
     entity "bronze.patients" as b_pat <<BRONZE>>
     entity "bronze.sejours" as b_sej <<BRONZE>>
     entity "bronze.diagnostics" as b_dia <<BRONZE>>
     entity "bronze.monitoring" as b_mon <<BRONZE>>
     entity "bronze.ref_services" as b_refs <<BRONZE>>
     entity "bronze.ref_cim10" as b_refc <<BRONZE>>
+    entity "bronze.ref_description_service" as b_desc [Évolution] <<BRONZE>>
+    entity "bronze.ref_ccam" as b_ccam [Évolution] <<BRONZE>>
+    entity "bronze.actes" as b_act [Évolution] <<BRONZE>>
 }
 
-package "2. COUCHE SILVER (Macro : 3 Facts Indépendants)" #FAFAFA {
+package "2. COUCHE SILVER (Star Schema : 4 Facts & 4 Dimensions)" #FAFAFA {
     package "Dimensions" #EBF5FB {
         entity "silver.dim_patients" as s_pat <<DIMENSION>>
-        entity "silver.dim_services" as s_refs <<DIMENSION>>
+        entity "silver.dim_services" as s_refs [Enrichie] <<DIMENSION>>
         entity "silver.dim_cim10" as s_refc <<DIMENSION>>
+        entity "silver.dim_ccam" as s_ccam [Nouveau] <<DIMENSION>>
     }
 
-    package "3 Facts Indépendants" #FDEDEC {
+    package "4 Tables de Faits Indépendantes" #FDEDEC {
         entity "silver.fact_sejours" as s_sej <<FACT>>
         entity "silver.fact_diagnostics" as s_dia <<FACT>>
         entity "silver.fact_monitoring" as s_mon <<FACT>>
+        entity "silver.fact_acte" as s_act [Nouveau Fact] <<FACT>>
     }
 }
 
-package "3. COUCHE GOLD" #FEF9E7 {
-    entity "gold.vue_pilotage_dms" as g_dms <<GOLD>>
-    entity "gold.vue_pilotage_urgences" as g_urg <<GOLD>>
-    entity "gold.vue_pilotage_readmissions_30j" as g_readm <<GOLD>>
-    entity "gold.vue_pilotage_alertes" as g_alt <<GOLD>>
-    entity "gold.vue_recherche_prevalence" as g_prev <<GOLD>>
-    entity "gold.vue_recherche_cohortes" as g_coh <<GOLD>>
+package "3. COUCHE GOLD (Datamarts Métier pour Metabase)" #FEF9E7 {
+    package "Pilotage & Urgences" {
+        entity "gold.vue_pilotage_dms" as g_dms <<GOLD>>
+        entity "gold.vue_pilotage_urgences" as g_urg <<GOLD>>
+        entity "gold.vue_pilotage_readmissions_30j" as g_readm <<GOLD>>
+        entity "gold.vue_pilotage_alertes" as g_alt <<GOLD>>
+    }
+    package "Plateau Technique & T2A (Évolution)" {
+        entity "gold.vue_pilotage_categories" as g_cat <<GOLD>>
+        entity "gold.vue_pilotage_actes_services" as g_act_serv <<GOLD>>
+        entity "gold.vue_pilotage_actes_ccam" as g_act_ccam <<GOLD>>
+        entity "gold.vue_pilotage_densite_plateau" as g_dens <<GOLD>>
+        entity "gold.vue_pilotage_facturation_t2a" as g_t2a <<GOLD>>
+    }
+    package "Recherche Clinique (RGPD)" {
+        entity "gold.vue_recherche_prevalence" as g_prev <<GOLD>>
+        entity "gold.vue_recherche_cohortes" as g_coh <<GOLD>>
+        entity "gold.vue_recherche_synthese" as g_synth <<GOLD>>
+    }
 }
 
 ' Lignage Bronze -> Silver
 b_pat -down-> s_pat
 b_refs -down-> s_refs
+b_desc -down-> s_refs
 b_refc -down-> s_refc
+b_ccam -down-> s_ccam
 b_sej -down-> s_sej
 b_dia -down-> s_dia
 b_mon -down-> s_mon
+b_act -down-> s_act
 
 ' Relations Dimensionnelles Silver
 s_pat  ||--o{ s_sej
@@ -77,6 +97,11 @@ s_refs ||--o{ s_sej
 s_pat  ||--o{ s_dia
 s_refc ||--o{ s_dia
 s_refs ||--o{ s_mon
+
+' Relations pour le fait 'fact_acte'
+s_refs ||--o{ s_act : "service_code"
+s_ccam ||--o{ s_act : "code_ccam"
+s_pat  ||--o{ s_act : "patient_pseudo_id"
 
 ' Alimentation Silver -> Gold
 s_sej -down-> g_dms
@@ -87,5 +112,19 @@ s_refs -down-> g_alt
 s_dia -down-> g_prev
 s_dia -down-> g_coh
 s_pat -down-> g_coh
+s_dia -down-> g_synth
+
+' Alimentation Nouveaux Datamarts T2A
+s_sej -down-> g_cat
+s_refs -down-> g_cat
+s_act -down-> g_act_serv
+s_refs -down-> g_act_serv
+s_act -down-> g_act_ccam
+s_ccam -down-> g_act_ccam
+s_act -down-> g_dens
+s_refs -down-> g_dens
+s_act -down-> g_t2a
+s_ccam -down-> g_t2a
+s_refs -down-> g_t2a
 
 @enduml
