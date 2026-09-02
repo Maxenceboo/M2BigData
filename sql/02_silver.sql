@@ -16,12 +16,23 @@ CREATE TABLE IF NOT EXISTS silver.dim_patients (
 ) ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY patient_pseudo_id;
 
--- Dimension Services
+-- Dimension Services (enrichie avec hiérarchie : service -> catégorie -> pôle)
 CREATE TABLE IF NOT EXISTS silver.dim_services (
     service_code LowCardinality(String),
-    service_label String
+    service_label String,
+    categorie LowCardinality(String),
+    capacite_lits UInt16,
+    pole LowCardinality(String)
 ) ENGINE = ReplacingMergeTree()
 ORDER BY service_code;
+
+-- Dimension CCAM (Nomenclature des Actes Médicaux)
+CREATE TABLE IF NOT EXISTS silver.dim_ccam (
+    code_ccam LowCardinality(String),
+    libelle String,
+    tarif_euros UInt32
+) ENGINE = ReplacingMergeTree()
+ORDER BY code_ccam;
 
 -- Dimension CIM-10 (Diagnostics)
 CREATE TABLE IF NOT EXISTS silver.dim_cim10 (
@@ -78,3 +89,14 @@ CREATE TABLE IF NOT EXISTS silver.fact_monitoring (
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(ts)
 ORDER BY (service_code, stay_id, ts);
+
+-- FACT 4 : Actes Médicaux (Évolution Lot 2026-08-29)
+CREATE TABLE IF NOT EXISTS silver.fact_acte (
+    stay_id String,
+    service_code LowCardinality(String),
+    code_ccam LowCardinality(String),
+    acte_ts DateTime,
+    created_at DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(created_at)
+ORDER BY (service_code, code_ccam, stay_id, acte_ts);
+

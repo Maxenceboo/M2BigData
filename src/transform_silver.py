@@ -53,20 +53,38 @@ def run_silver_transformations():
     print("[INFO] Initialisation des tables Silver...")
     client.command("DROP TABLE IF EXISTS silver.fact_diagnostics")
     client.command("DROP TABLE IF EXISTS silver.fact_monitoring")
+    client.command("DROP TABLE IF EXISTS silver.fact_acte")
+    client.command("DROP TABLE IF EXISTS silver.dim_services")
+    client.command("DROP TABLE IF EXISTS silver.dim_ccam")
     sql_silver = BASE_DIR / "sql" / "02_silver.sql"
     execute_sql_file(client, sql_silver)
     print("  [OK] Schéma Silver vérifié.")
 
     # 2. Dimensions Référentiels
-    print("\n[INFO] Transformation silver.dim_services & silver.dim_cim10...")
+    print("\n[INFO] Transformation silver.dim_services, silver.dim_cim10 & silver.dim_ccam...")
     client.command("TRUNCATE TABLE silver.dim_services")
     client.command("""
-        INSERT INTO silver.dim_services (service_code, service_label)
-        SELECT DISTINCT service_code, service_label
-        FROM bronze.ref_services
+        INSERT INTO silver.dim_services (service_code, service_label, categorie, capacite_lits, pole)
+        SELECT 
+            s.service_code,
+            s.service_label,
+            if(d.service_code = '' OR d.categorie = '', 'Non catégorisé', d.categorie) AS categorie,
+            if(d.service_code = '', 0, d.capacite_lits) AS capacite_lits,
+            if(d.service_code = '' OR d.pole = '', 'Pôle Indéterminé', d.pole) AS pole
+        FROM bronze.ref_services s
+        LEFT JOIN bronze.ref_description_service d ON s.service_code = d.service_code
     """)
     srv_count = client.query("SELECT count() FROM silver.dim_services").result_rows[0][0]
-    print(f"  [OK] silver.dim_services : {srv_count} services chargés")
+    print(f"  [OK] silver.dim_services : {srv_count} services chargés (avec hiérarchie et pôles)")
+
+    client.command("TRUNCATE TABLE silver.dim_ccam")
+    client.command("""
+        INSERT INTO silver.dim_ccam (code_ccam, libelle, tarif_euros)
+        SELECT DISTINCT code_ccam, libelle, tarif_euros
+        FROM bronze.ref_ccam
+    """)
+    ccam_count = client.query("SELECT count() FROM silver.dim_ccam").result_rows[0][0]
+    print(f"  [OK] silver.dim_ccam : {ccam_count} actes CCAM chargés")
 
     client.command("TRUNCATE TABLE silver.dim_cim10")
     client.command("""
@@ -181,9 +199,32 @@ def run_silver_transformations():
     print(f"       - {outliers_mon} mesures aberrantes écartées")
     print(f"       - {alerts_mon} alertes vitales détectées")
 
+    # 6. Table de Faits Actes Médicaux (Évolution Lot 2026-08-29)
+    print("\n[INFO] Transformation silver.fact_acte...")
+    client.command("TRUNCATE TABLE silver.fact_acte")
+    client.command("""
+        INSERT INTO silver.fact_acte (
+            stay_id, service_code, code_ccam, acte_ts
+        )
+        SELECT
+            a.stay_id,
+            if(s.service_code != '', s.service_code, if(b.service_code != '', b.service_code, 'INCONNU')) AS service_code,
+            a.code_ccam,
+            a.acte_ts
+        FROM bronze.actes AS a
+        LEFT JOIN silver.fact_sejours AS s ON a.stay_id = s.stay_id
+        LEFT JOIN bronze.sejours AS b ON a.stay_id = b.stay_id
+    """)
+    silver_actes = client.query("SELECT count() FROM silver.fact_acte").result_rows[0][0]
+    print(f"  [OK] silver.fact_acte : {silver_actes} actes médicaux intégrés")
+
     print("\n" + "=" * 70)
     print("[END] RECAPITULATIF DE LA COUCHE SILVER :")
-    for tbl in ["silver.dim_patients", "silver.dim_services", "silver.dim_cim10", "silver.fact_sejours", "silver.fact_diagnostics", "silver.fact_monitoring"]:
+    tables_to_check = [
+        "silver.dim_patients", "silver.dim_services", "silver.dim_ccam", "silver.dim_cim10",
+        "silver.fact_sejours", "silver.fact_diagnostics", "silver.fact_monitoring", "silver.fact_acte"
+    ]
+    for tbl in tables_to_check:
         count = client.query(f"SELECT count() FROM {tbl}").result_rows[0][0]
         print(f"  - {tbl:<25} : {count:>8} lignes")
     print("=" * 70)
