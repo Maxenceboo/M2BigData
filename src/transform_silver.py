@@ -52,6 +52,7 @@ def run_silver_transformations():
     # 1. Initialiser ou mettre à jour le schéma Silver
     print("[INFO] Initialisation des tables Silver...")
     client.command("DROP TABLE IF EXISTS silver.fact_diagnostics")
+    client.command("DROP TABLE IF EXISTS silver.fact_monitoring")
     sql_silver = BASE_DIR / "sql" / "02_silver.sql"
     execute_sql_file(client, sql_silver)
     print("  [OK] Schéma Silver vérifié.")
@@ -125,12 +126,13 @@ def run_silver_transformations():
     print(f"       - {invalid_sej} séjours incohérents écartés (discharge < admission)")
     print(f"       - {ongoing_sej} séjours en cours légitimement conservés")
 
-    # 5. FACT Diagnostics (Calcul âge au diagnostic, code_cim10 pur)
-    print("\n[INFO] Transformation silver.fact_diagnostics (avec calcul age_at_diagnostics)...")
+    # 5. FACT Diagnostics (Calcul âge au diagnostic, code_cim10 pur, patient_pseudo_id)
+    print("\n[INFO] Transformation silver.fact_diagnostics (avec calcul age_at_diagnostics & patient_pseudo_id)...")
     client.command("""
-        INSERT INTO silver.fact_diagnostics (stay_id, age_at_diagnostics, code_cim10, diag_type)
+        INSERT INTO silver.fact_diagnostics (stay_id, patient_pseudo_id, age_at_diagnostics, code_cim10, diag_type)
         SELECT DISTINCT
             d.stay_id,
+            s.patient_pseudo_id,
             toUInt8(greatest(0, toYear(s.admission_ts) - p.birth_year)) AS age_at_diagnostics,
             d.code_cim10,
             d.diag_type
@@ -141,29 +143,35 @@ def run_silver_transformations():
     silver_dia = client.query("SELECT count() FROM silver.fact_diagnostics").result_rows[0][0]
     print(f"  [OK] silver.fact_diagnostics : {silver_dia} diagnostics enregistrés avec calcul d'âge")
 
-    # 6. FACT Monitoring (Filtrage bornes physiologiques et précalcul alertes)
+    # 6. FACT Monitoring (Filtrage bornes physiologiques, précalcul alertes et service_code)
     print("\n[INFO] Transformation & Filtrage physiologique silver.fact_monitoring...")
     client.command("TRUNCATE TABLE silver.fact_monitoring")
     client.command("""
         INSERT INTO silver.fact_monitoring (
-            stay_id, ts, heart_rate, spo2, temp_c, is_alert, alert_reasons
+            stay_id, service_code, ts, heart_rate, spo2, temp_c, 
+            is_alert, is_alert_fc, is_alert_spo2, is_alert_temp, alert_reasons
         )
         SELECT
-            stay_id,
-            ts,
-            heart_rate,
-            spo2,
-            temp_c,
-            if((heart_rate < 50 OR heart_rate > 120) OR (spo2 < 92) OR (temp_c < 36.0 OR temp_c >= 38.5), 1, 0) AS is_alert,
+            m.stay_id,
+            s.service_code,
+            m.ts,
+            m.heart_rate,
+            m.spo2,
+            m.temp_c,
+            if((m.heart_rate < 50 OR m.heart_rate > 120) OR (m.spo2 < 92) OR (m.temp_c < 36.0 OR m.temp_c >= 38.5), 1, 0) AS is_alert,
+            if(m.heart_rate < 50 OR m.heart_rate > 120, 1, 0) AS is_alert_fc,
+            if(m.spo2 < 92, 1, 0) AS is_alert_spo2,
+            if(m.temp_c < 36.0 OR m.temp_c >= 38.5, 1, 0) AS is_alert_temp,
             concat_ws(',',
-                if(heart_rate < 50 OR heart_rate > 120, 'FC_ANORMALE', ''),
-                if(spo2 < 92, 'HYPOXIE', ''),
-                if(temp_c < 36.0 OR temp_c >= 38.5, 'TEMP_ANORMALE', '')
+                if(m.heart_rate < 50 OR m.heart_rate > 120, 'FC_ANORMALE', ''),
+                if(m.spo2 < 92, 'HYPOXIE', ''),
+                if(m.temp_c < 36.0 OR m.temp_c >= 38.5, 'TEMP_ANORMALE', '')
             ) AS alert_reasons
-        FROM bronze.monitoring
-        WHERE (heart_rate IS NULL OR (heart_rate >= 20 AND heart_rate <= 250))
-          AND (spo2 IS NULL OR (spo2 >= 50 AND spo2 <= 100))
-          AND (temp_c IS NULL OR (temp_c >= 30.0 AND temp_c <= 45.0))
+        FROM bronze.monitoring AS m
+        JOIN silver.fact_sejours AS s ON m.stay_id = s.stay_id
+        WHERE (m.heart_rate IS NULL OR (m.heart_rate >= 20 AND m.heart_rate <= 250))
+          AND (m.spo2 IS NULL OR (m.spo2 >= 50 AND m.spo2 <= 100))
+          AND (m.temp_c IS NULL OR (m.temp_c >= 30.0 AND m.temp_c <= 45.0))
     """)
     bronze_mon = client.query("SELECT count() FROM bronze.monitoring").result_rows[0][0]
     silver_mon = client.query("SELECT count() FROM silver.fact_monitoring").result_rows[0][0]

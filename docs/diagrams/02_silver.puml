@@ -70,6 +70,7 @@ package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
             + **stay_id** : String
             + **code_cim10** : String <<FK>>
             --
+            # patient_pseudo_id : String <<FK>>
             age_at_diagnostics : UInt8
             diag_type : String
         }
@@ -79,10 +80,15 @@ package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
             + **stay_id** : String
             + **ts** : DateTime
             --
+            # service_code : String <<FK>>
             heart_rate : Nullable(Int16)
             spo2 : Nullable(Int16)
             temp_c : Nullable(Float32)
             is_alert : UInt8
+            is_alert_fc : UInt8
+            is_alert_spo2 : UInt8
+            is_alert_temp : UInt8
+            alert_reasons : String
         }
     }
 }
@@ -93,6 +99,9 @@ package "Couche SILVER (Entrepôt Nettoyé)" #FAFAFA {
 dim_patients ||--o{ fact_sejours : "dim_patients"
 dim_services ||--o{ fact_sejours : "dim_services"
 
+dim_patients ||--o{ fact_diagnostics : "dim_patients"
 dim_cim10    ||--o{ fact_diagnostics : "dim_cim10"
+
+dim_services ||--o{ fact_monitoring : "dim_services"
 
 @enduml

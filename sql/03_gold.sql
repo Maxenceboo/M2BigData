@@ -69,19 +69,18 @@ ORDER BY mois;
 CREATE OR REPLACE VIEW gold.vue_pilotage_alertes AS
 SELECT
     toDate(m.ts) AS jour,
-    s.service_code AS service_code,
-    COALESCE(r.service_label, s.service_code) AS service_label,
+    m.service_code AS service_code,
+    COALESCE(r.service_label, m.service_code) AS service_label,
     count() AS nb_mesures_totales,
     countIf(m.is_alert = 1) AS nb_alertes_totales,
-    countIf(m.heart_rate < 50 OR m.heart_rate > 120) AS nb_alertes_fc,
-    countIf(m.spo2 < 92) AS nb_alertes_spo2,
-    countIf(m.temp_c < 36.0 OR m.temp_c >= 38.5) AS nb_alertes_temp,
+    countIf(m.is_alert_fc = 1) AS nb_alertes_fc,
+    countIf(m.is_alert_spo2 = 1) AS nb_alertes_spo2,
+    countIf(m.is_alert_temp = 1) AS nb_alertes_temp,
     round(100.0 * countIf(m.is_alert = 1) / nullIf(count(), 0), 2) AS taux_alertes_pct
 FROM silver.fact_monitoring AS m
-LEFT JOIN silver.fact_sejours AS s ON m.stay_id = s.stay_id
-LEFT JOIN silver.dim_services AS r ON s.service_code = r.service_code
-GROUP BY jour, s.service_code, service_label
-ORDER BY jour, s.service_code;
+LEFT JOIN silver.dim_services AS r ON m.service_code = r.service_code
+GROUP BY jour, m.service_code, service_label
+ORDER BY jour, m.service_code;
 
 
 -- -----------------------------------------------------------------------------
@@ -94,12 +93,11 @@ SELECT
     d.code_cim10 AS code_cim10,
     COALESCE(r.libelle, d.code_cim10) AS libelle_pathologie,
     -- Règle RGPD des petits effectifs (< 5 masqué)
-    count(DISTINCT s.patient_pseudo_id) AS nb_patients_uniques,
+    count(DISTINCT d.patient_pseudo_id) AS nb_patients_uniques,
     count() AS nb_diagnostics_total,
     countIf(d.diag_type = 'principal') AS nb_diagnostic_principal,
     countIf(d.diag_type = 'associe') AS nb_diagnostic_associe
 FROM silver.fact_diagnostics AS d
-JOIN silver.fact_sejours AS s ON d.stay_id = s.stay_id
 LEFT JOIN silver.dim_cim10 AS r ON d.code_cim10 = r.code_cim10
 GROUP BY code_cim10, libelle_pathologie
 HAVING nb_patients_uniques >= 5
@@ -119,10 +117,9 @@ SELECT
         '80+ ans'
     ) AS tranche_age,
     p.sex AS sex,
-    count(DISTINCT s.patient_pseudo_id) AS nb_patients
+    count(DISTINCT d.patient_pseudo_id) AS nb_patients
 FROM silver.fact_diagnostics AS d
-JOIN silver.fact_sejours AS s ON d.stay_id = s.stay_id
-JOIN silver.dim_patients AS p ON s.patient_pseudo_id = p.patient_pseudo_id
+JOIN silver.dim_patients AS p ON d.patient_pseudo_id = p.patient_pseudo_id
 LEFT JOIN silver.dim_cim10 AS r ON d.code_cim10 = r.code_cim10
 GROUP BY code_cim10, libelle_pathologie, tranche_age, sex
 HAVING nb_patients >= 5 -- Règle stricte RGPD petits effectifs

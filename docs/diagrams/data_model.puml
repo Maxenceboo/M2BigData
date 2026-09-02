@@ -74,13 +74,16 @@ b_mon -down-> s_mon
 ' Relations Dimensionnelles Silver
 s_pat  ||--o{ s_sej
 s_refs ||--o{ s_sej
+s_pat  ||--o{ s_dia
 s_refc ||--o{ s_dia
+s_refs ||--o{ s_mon
 
 ' Alimentation Silver -> Gold
 s_sej -down-> g_dms
 s_sej -down-> g_urg
 s_sej -down-> g_readm
 s_mon -down-> g_alt
+s_refs -down-> g_alt
 s_dia -down-> g_prev
 s_dia -down-> g_coh
 s_pat -down-> g_coh
