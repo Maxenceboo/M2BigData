@@ -57,11 +57,12 @@ def setup_clickhouse_user():
     """)
     print(f"  [OK] Utilisateur ClickHouse '{MB_SQL_USER}' vérifié.")
 
-    # 2. Révocation de tout accès global ou résiduel sur bronze/silver
-    try:
-        client.command(f"REVOKE ALL ON *.* FROM {MB_SQL_USER}")
-    except Exception:
-        pass
+    # 2. Révocation de tout accès résiduel sur bronze, silver, admin ou global
+    for target in ["*.*", "silver.*", "bronze.*", "admin.*"]:
+        try:
+            client.command(f"REVOKE ALL ON {target} FROM {MB_SQL_USER}")
+        except Exception:
+            pass
 
     # 3. Droits de lecture STRICTEMENT et UNIQUEMENT sur gold.* et métadonnées système
     client.command(f"GRANT SELECT ON gold.* TO {MB_SQL_USER}")
