@@ -118,7 +118,6 @@ package "Couche SILVER (Entrepôt Nettoyé & Structuré)" #FAFAFA {
             + **acte_id** : UUID <<PK>>
             --
             stay_id : String
-            # patient_pseudo_id : String <<FK>>
             # service_code : String <<FK>>
             # code_ccam : String <<FK>>
             acte_ts : DateTime
@@ -139,6 +138,5 @@ dim_services ||--o{ fact_monitoring : "1 service : N mesures"
 
 dim_services ||--o{ fact_acte : "1 service : N actes"
 dim_ccam     ||--o{ fact_acte : "1 code CCAM : N actes"
-dim_patients ||--o{ fact_acte : "1 patient : N actes"
 
 @enduml

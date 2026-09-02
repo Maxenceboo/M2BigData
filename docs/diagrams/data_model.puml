@@ -101,7 +101,6 @@ s_refs ||--o{ s_mon
 ' Relations pour le fait 'fact_acte'
 s_refs ||--o{ s_act : "service_code"
 s_ccam ||--o{ s_act : "code_ccam"
-s_pat  ||--o{ s_act : "patient_pseudo_id"
 
 ' Alimentation Silver -> Gold
 s_sej -down-> g_dms
