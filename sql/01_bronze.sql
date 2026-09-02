@@ -70,3 +70,36 @@ CREATE TABLE IF NOT EXISTS bronze.ref_cim10 (
     ingested_at DateTime DEFAULT now()
 ) ENGINE = MergeTree()
 ORDER BY code_cim10;
+
+-- 6. Évolution Lot 2026-08-29 : Description fine des services
+CREATE TABLE IF NOT EXISTS bronze.ref_description_service (
+    service_code LowCardinality(String),
+    categorie LowCardinality(String),
+    capacite_lits UInt16,
+    pole LowCardinality(String),
+    source_file String,
+    ingested_at DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY service_code;
+
+-- 7. Évolution Lot 2026-08-29 : Référentiel Nomenclature CCAM
+CREATE TABLE IF NOT EXISTS bronze.ref_ccam (
+    code_ccam LowCardinality(String),
+    libelle String,
+    tarif_euros UInt32,
+    source_file String,
+    ingested_at DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY code_ccam;
+
+-- 8. Évolution Lot 2026-08-29 : Flux de faits Actes Médicaux
+CREATE TABLE IF NOT EXISTS bronze.actes (
+    stay_id String,
+    code_ccam LowCardinality(String),
+    acte_ts DateTime,
+    source_date Date,
+    source_file String,
+    ingested_at DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY (source_date, stay_id, acte_ts);
+

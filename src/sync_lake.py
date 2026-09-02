@@ -64,7 +64,7 @@ def discover_source_dates() -> List[str]:
         print(f"[ERREUR] Le dossier source {SOURCE_DIR} n'existe pas.")
         return []
 
-    for entity in ["patients", "sejours", "diagnostics", "monitoring", "referentiels"]:
+    for entity in ["patients", "sejours", "diagnostics", "monitoring", "referentiels", "actes"]:
         entity_dir = SOURCE_DIR / entity
         if entity_dir.exists() and entity_dir.is_dir():
             for child in entity_dir.iterdir():
@@ -203,7 +203,7 @@ def sync_date_deposit(date_str: str) -> Dict:
             result["monitoring_synced"] = True
             print("  [OK] Monitoring Parquet copie")
 
-        # 5. Referentiels (services.csv, cim10.csv)
+        # 5. Referentiels (services.csv, cim10.csv, description_service.csv, ccam.csv)
         src_ref = SOURCE_DIR / "referentiels" / date_str
         tgt_ref = LAKE_DIR / "referentiels" / date_str
         if src_ref.exists():
@@ -211,6 +211,14 @@ def sync_date_deposit(date_str: str) -> Dict:
                 copy_file_safe(ref_file, tgt_ref / ref_file.name)
             result["referentiels_synced"] = True
             print("  [OK] Referentiels CSV copies")
+
+        # 6. Actes Médicaux (Parquet) - Évolution Lot 2026-08-29
+        src_act = SOURCE_DIR / "actes" / date_str / "actes.parquet"
+        tgt_act = LAKE_DIR / "actes" / date_str / "actes.parquet"
+        if src_act.exists():
+            copy_file_safe(src_act, tgt_act)
+            result["actes_synced"] = True
+            print("  [OK] Actes Parquet copies")
 
         result["success"] = True
     except Exception as e:

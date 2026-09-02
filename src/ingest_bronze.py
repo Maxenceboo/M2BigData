@@ -224,6 +224,31 @@ def ingest_monitoring(client, date_str: str) -> int:
     return len(df)
 
 
+def ingest_actes(client, date_str: str) -> int:
+    file_path = LAKE_DIR / "actes" / date_str / "actes.parquet"
+    if not file_path.exists():
+        return 0
+
+    rel_name = f"actes/{date_str}/actes.parquet"
+    already_ingested = get_ingested_files(client, "bronze.actes")
+    if rel_name in already_ingested:
+        print(f"  [SKIP] Actes {date_str} deja ingere.")
+        return 0
+
+    source_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    table = pq.read_table(file_path)
+    df = table.to_pandas()
+    df["source_date"] = source_date
+    df["source_file"] = rel_name
+
+    client.insert_df(
+        "bronze.actes",
+        df[["stay_id", "code_ccam", "acte_ts", "source_date", "source_file"]]
+    )
+    print(f"  [OK] Ingestion bronze.actes [{date_str}] : {len(df)} actes")
+    return len(df)
+
+
 def ingest_referentiels(client, date_str: str):
     ref_dir = LAKE_DIR / "referentiels" / date_str
     if not ref_dir.exists():
@@ -255,6 +280,43 @@ def ingest_referentiels(client, date_str: str):
             client.insert("bronze.ref_cim10", rows, column_names=["code_cim10", "libelle", "source_file"])
             print(f"  [OK] Ingestion bronze.ref_cim10 : {len(rows)} enregistrements")
 
+    # Description Services (Évolution)
+    desc_file = ref_dir / "description_service.csv"
+    if desc_file.exists():
+        rows = []
+        with open(desc_file, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                rows.append((
+                    r["service_code"].strip(),
+                    r.get("categorie", "").strip(),
+                    int(r.get("capacite_lits", 0) or 0),
+                    r.get("pole", "").strip(),
+                    f"referentiels/{date_str}/description_service.csv"
+                ))
+        if rows:
+            client.command("TRUNCATE TABLE bronze.ref_description_service")
+            client.insert("bronze.ref_description_service", rows, column_names=["service_code", "categorie", "capacite_lits", "pole", "source_file"])
+            print(f"  [OK] Ingestion bronze.ref_description_service : {len(rows)} enregistrements")
+
+    # CCAM (Évolution)
+    ccam_file = ref_dir / "ccam.csv"
+    if ccam_file.exists():
+        rows = []
+        with open(ccam_file, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                rows.append((
+                    r["code_ccam"].strip(),
+                    r.get("libelle", "").strip(),
+                    int(r.get("tarif_euros", 0) or 0),
+                    f"referentiels/{date_str}/ccam.csv"
+                ))
+        if rows:
+            client.command("TRUNCATE TABLE bronze.ref_ccam")
+            client.insert("bronze.ref_ccam", rows, column_names=["code_ccam", "libelle", "tarif_euros", "source_file"])
+            print(f"  [OK] Ingestion bronze.ref_ccam : {len(rows)} enregistrements")
+
 
 def run_bronze_ingestion():
     """Exécute l'ingestion de tous les dossiers journaliers du Lake."""
@@ -273,7 +335,7 @@ def run_bronze_ingestion():
 
     # Trouver toutes les dates dans le lake
     dates = set()
-    for sub in ["patients", "sejours", "diagnostics", "monitoring", "referentiels"]:
+    for sub in ["patients", "sejours", "diagnostics", "monitoring", "referentiels", "actes"]:
         p = LAKE_DIR / sub
         if p.exists():
             for d in p.iterdir():
@@ -287,6 +349,7 @@ def run_bronze_ingestion():
     total_sejours = 0
     total_diagnostics = 0
     total_monitoring = 0
+    total_actes = 0
 
     for date_str in sorted_dates:
         print(f"\n📥 Ingestion du lot : [{date_str}]")
@@ -294,13 +357,19 @@ def run_bronze_ingestion():
         total_sejours += ingest_sejours(client, date_str)
         total_diagnostics += ingest_diagnostics(client, date_str)
         total_monitoring += ingest_monitoring(client, date_str)
+        total_actes += ingest_actes(client, date_str)
         ingest_referentiels(client, date_str)
 
     print("\n" + "=" * 70)
     print("[END] RECAPITULATIF DES LIGNES EN BASE BRONZE :")
-    for tbl in ["bronze.patients", "bronze.sejours", "bronze.diagnostics", "bronze.monitoring", "bronze.ref_services", "bronze.ref_cim10"]:
+    tables_to_check = [
+        "bronze.patients", "bronze.sejours", "bronze.diagnostics", "bronze.monitoring",
+        "bronze.ref_services", "bronze.ref_cim10", "bronze.ref_description_service",
+        "bronze.ref_ccam", "bronze.actes"
+    ]
+    for tbl in tables_to_check:
         count = client.query(f"SELECT count() FROM {tbl}").result_rows[0][0]
-        print(f"  - {tbl:<25} : {count:>8} lignes")
+        print(f"  - {tbl:<32} : {count:>8} lignes")
     print("=" * 70)
 
 
