@@ -12,7 +12,9 @@ __pycache__/
 
 # Données & Logs locaux
 lake/
+logs/
 *.log
+*.lock
 
 # Docker persistant
 .clickhouse-data/

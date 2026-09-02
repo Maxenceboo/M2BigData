@@ -13,6 +13,7 @@ import sys
 import time
 import urllib.request
 import urllib.error
+from pathlib import Path
 
 if sys.platform == "win32":
     try:
@@ -20,6 +21,12 @@ if sys.platform == "win32":
         sys.stderr.reconfigure(encoding="utf-8")
     except Exception:
         pass
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from src.setup_users import setup_clickhouse_user, setup_metabase_users, MB_SQL_USER, MB_SQL_PASS
 
 METABASE_URL = "http://localhost:3000"
 ADMIN_EMAIL = "admin@eds-chu.fr"
@@ -109,23 +116,32 @@ def main():
     token = get_session()
     print("  [OK] Session administrateur authentifiée.")
 
-    # 1. Base ClickHouse
+    # 1. Base ClickHouse & Utilisateur technique (Accès strict GOLD)
+    setup_clickhouse_user()
+
     dbs = api_get("/api/database", token)["data"]
     ch_db = next((d for d in dbs if d["engine"] == "clickhouse"), None)
+    db_details = {
+        "host": "clickhouse",
+        "port": 8123,
+        "db": "default",
+        "user": "metabase_user",
+        "password": "MetabasePassword123!"
+    }
     if not ch_db:
         ch_db = api_post("/api/database", {
             "name": "ClickHouse EDS",
             "engine": "clickhouse",
-            "details": {
-                "host": "clickhouse",
-                "port": 8123,
-                "db": "default",
-                "user": "default",
-                "password": ""
-            }
+            "details": db_details
+        }, token)
+    else:
+        api_put(f"/api/database/{ch_db['id']}", {
+            "name": ch_db["name"],
+            "engine": "clickhouse",
+            "details": db_details
         }, token)
     db_id = ch_db["id"]
-    print(f"  [OK] Base ClickHouse active (id: {db_id})")
+    print(f"  [OK] Base ClickHouse connectée via metabase_user (id: {db_id})")
 
     # Sync
     try:
@@ -404,7 +420,7 @@ def main():
     c_r_kpi_pat = create_or_update_card(
         name="KPI - Patients Inclus dans l'EDS",
         display="scalar",
-        sql="SELECT count(DISTINCT patient_pseudo_id) AS total_patients FROM silver.fact_diagnostics",
+        sql="SELECT nb_patients_total AS total_patients FROM gold.vue_recherche_synthese",
         viz_settings={"scalar.field": "total_patients"},
         collection_id=col_recherche["id"], db_id=db_id, token=token, existing_cards=existing_cards
     )
@@ -413,7 +429,7 @@ def main():
     c_r_kpi_diag = create_or_update_card(
         name="KPI - Diagnostics Médicaux Référencés",
         display="scalar",
-        sql="SELECT sum(nb_diagnostics_total) AS total_diagnostics FROM gold.vue_recherche_prevalence",
+        sql="SELECT nb_diagnostics_total AS total_diagnostics FROM gold.vue_recherche_synthese",
         viz_settings={"scalar.field": "total_diagnostics"},
         collection_id=col_recherche["id"], db_id=db_id, token=token, existing_cards=existing_cards
     )
@@ -422,7 +438,7 @@ def main():
     c_r_kpi_patho = create_or_update_card(
         name="KPI - Pathologies Distinctes Surveillées",
         display="scalar",
-        sql="SELECT count(DISTINCT code_cim10) AS nb_pathologies FROM gold.vue_recherche_prevalence",
+        sql="SELECT nb_pathologies_surveillees AS nb_pathologies FROM gold.vue_recherche_synthese",
         viz_settings={"scalar.field": "nb_pathologies"},
         collection_id=col_recherche["id"], db_id=db_id, token=token, existing_cards=existing_cards
     )
@@ -550,35 +566,8 @@ def main():
     api_put(f"/api/dashboard/{dash_recherche['id']}", {"dashcards": dashcards_recherche}, token)
     print("  [OK] Dashboard Recherche Clinique entièrement restructuré et stylisé.")
 
-    # 3. Vérifier permissions & cloisonnement
-    print("\n" + "-" * 70)
-    print("🔐 VERIFICATION DU CLOISONNEMENT STRICT DES DROITS")
-    print("-" * 70)
-
-    groups = api_get("/api/permissions/group", token)
-    grp_dir = next((g for g in groups if g["name"] == "Direction & Pilotage"), None)
-    grp_rech = next((g for g in groups if g["name"] == "Recherche Clinique"), None)
-
-    graph = api_get("/api/collection/graph", token)
-    c_p_id = str(col_pilotage["id"])
-    c_r_id = str(col_recherche["id"])
-    g_all_id = "1"
-    g_dir_id = str(grp_dir["id"])
-    g_rech_id = str(grp_rech["id"])
-
-    if g_all_id in graph["groups"]:
-        graph["groups"][g_all_id]["root"] = "none"
-        graph["groups"][g_all_id][c_p_id] = "none"
-        graph["groups"][g_all_id][c_r_id] = "none"
-
-    graph["groups"][g_dir_id] = {"root": "read", c_p_id: "read", c_r_id: "none"}
-    graph["groups"][g_rech_id] = {"root": "read", c_p_id: "none", c_r_id: "read"}
-
-    try:
-        api_put("/api/collection/graph", graph, token)
-        print("  [OK] Arbre des permissions vérifié.")
-    except Exception as e:
-        print(f"  [WARN] Note sur les permissions : {e}")
+    # 3. Utilisateurs, groupes et cloisonnement des droits
+    setup_metabase_users()
 
     print("\n" + "=" * 70)
     print("🎉 DEPLOIEMENT HAUTE FIDELITE TERMINE !")
