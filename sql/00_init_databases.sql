@@ -21,6 +21,7 @@ ORDER BY started_at;
 -- Utilisateur technique dédié pour la connexion Metabase (Lecture seule)
 CREATE USER IF NOT EXISTS metabase_user IDENTIFIED WITH sha256_password BY 'MetabasePassword123!';
 GRANT SELECT ON gold.* TO metabase_user;
+GRANT SELECT ON silver.* TO metabase_user;
 GRANT SELECT ON system.tables TO metabase_user;
 GRANT SELECT ON system.columns TO metabase_user;
 GRANT SELECT ON system.databases TO metabase_user;
