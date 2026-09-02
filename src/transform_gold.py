@@ -115,6 +115,41 @@ def run_gold_transformations():
     for r in coh_res:
         print(f"  • [{r[0]}] {r[1]:<25} | {r[2]:<10} | Sexe {r[3]} : {r[4]} patients")
 
+    # 4. Validation & Affichage des KPI Évolution (T2A & Plateau Technique)
+    print("\n" + "-" * 70)
+    print("💰 APERÇU DES INDICATEURS MÉDICO-ÉCONOMIQUES & PLATEAU TECHNIQUE (ÉVOLUTION) :")
+    print("-" * 70)
+
+    # Catégories
+    print("\n📌 Activité & DMS par Catégorie de Service :")
+    cat_res = client.query("SELECT categorie, pole, nb_sejours_termines, dms_jours FROM gold.vue_pilotage_categories").result_rows
+    for r in cat_res:
+        print(f"  • {r[0]:<15} ({r[1]:<20}) : {r[2]:>4} séjours clôturés | DMS = {r[3]:>5.2f} jours")
+
+    # Actes & Intensité par Service
+    print("\n📌 Volume d'Actes & Intensité par Séjour :")
+    act_res = client.query("SELECT service_label, nb_actes_total, nb_sejours_concernes, moyenne_actes_par_sejour FROM gold.vue_pilotage_actes_services LIMIT 5").result_rows
+    for r in act_res:
+        print(f"  • {r[0]:<15} : {r[1]:>5} actes ({r[2]:>4} séjours) | Moyenne = {r[3]:>4.2f} actes/séjour")
+
+    # Top CCAM
+    print("\n📌 Palmarès des Actes CCAM les plus Fréquents :")
+    ccam_res = client.query("SELECT libelle_acte, nb_actes_total, tarif_unitaire_euros, montant_total_euros FROM gold.vue_pilotage_actes_ccam LIMIT 5").result_rows
+    for r in ccam_res:
+        print(f"  • {r[0]:<32} : {r[1]:>5} actes @ {r[2]:>4}€ = {r[3]:>7}€")
+
+    # Densité par Lit
+    print("\n📌 Densité d'Actes par Lit Hospitalier (Plateau Technique) :")
+    dens_res = client.query("SELECT service_label, capacite_lits, nb_actes_total, densite_actes_par_lit FROM gold.vue_pilotage_densite_plateau WHERE capacite_lits > 0 LIMIT 5").result_rows
+    for r in dens_res:
+        print(f"  • {r[0]:<15} : {r[1]:>3} lits | {r[2]:>5} actes | Ratio = {r[3]:>5.2f} actes/lit")
+
+    # Facturation T2A
+    print("\n📌 Facturation T2A par Service :")
+    t2a_res = client.query("SELECT service_label, nb_actes_total, montant_total_t2a_euros FROM gold.vue_pilotage_facturation_t2a LIMIT 5").result_rows
+    for r in t2a_res:
+        print(f"  • {r[0]:<15} : {r[1]:>5} actes facturés | Total T2A = {r[2]:>7}€")
+
     print("\n" + "=" * 70)
     print("[END] COUCHE GOLD VALIDE ET OPERATIONNELLE")
     print("=" * 70)

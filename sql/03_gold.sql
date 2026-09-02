@@ -141,3 +141,90 @@ AS SELECT
     count() AS nb_diagnostics_total,
     count(DISTINCT code_cim10) AS nb_pathologies_surveillees
 FROM silver.fact_diagnostics;
+
+
+-- =============================================================================
+-- III. DATAMARTS EVOLUTION : PLATEAU TECHNIQUE & FACTURATION T2A (LOT 2026-08-29)
+-- =============================================================================
+
+-- KPI 1 : Activité et DMS par Catégorie de Service
+CREATE OR REPLACE VIEW gold.vue_pilotage_categories
+DEFINER = default
+SQL SECURITY DEFINER
+AS SELECT
+    s.categorie AS categorie,
+    s.pole AS pole,
+    countIf(f.is_ongoing = 0) AS nb_sejours_termines,
+    countIf(f.is_ongoing = 1) AS nb_sejours_en_cours,
+    round(avgIf(f.duree_sejour_jours, f.is_ongoing = 0), 2) AS dms_jours
+FROM silver.fact_sejours AS f
+JOIN silver.dim_services AS s ON f.service_code = s.service_code
+GROUP BY s.categorie, s.pole
+ORDER BY nb_sejours_termines DESC;
+
+-- KPI 2 : Nombre d'actes par service & moyenne par séjour
+CREATE OR REPLACE VIEW gold.vue_pilotage_actes_services
+DEFINER = default
+SQL SECURITY DEFINER
+AS SELECT
+    s.service_code AS service_code,
+    s.service_label AS service_label,
+    s.categorie AS categorie,
+    s.pole AS pole,
+    count() AS nb_actes_total,
+    count(DISTINCT a.stay_id) AS nb_sejours_concernes,
+    round(count() / nullIf(count(DISTINCT a.stay_id), 0), 2) AS moyenne_actes_par_sejour
+FROM silver.fact_acte AS a
+JOIN silver.dim_services AS s ON a.service_code = s.service_code
+GROUP BY s.service_code, s.service_label, s.categorie, s.pole
+ORDER BY nb_actes_total DESC;
+
+-- KPI 3 : Nombre d'actes par type d'acte CCAM
+CREATE OR REPLACE VIEW gold.vue_pilotage_actes_ccam
+DEFINER = default
+SQL SECURITY DEFINER
+AS SELECT
+    c.code_ccam AS code_ccam,
+    c.libelle AS libelle_acte,
+    c.tarif_euros AS tarif_unitaire_euros,
+    count() AS nb_actes_total,
+    count() * c.tarif_euros AS montant_total_euros
+FROM silver.fact_acte AS a
+JOIN silver.dim_ccam AS c ON a.code_ccam = c.code_ccam
+GROUP BY c.code_ccam, c.libelle, c.tarif_euros
+ORDER BY nb_actes_total DESC;
+
+-- KPI 4 : Densité d'actes par lit (Intensité du plateau technique)
+CREATE OR REPLACE VIEW gold.vue_pilotage_densite_plateau
+DEFINER = default
+SQL SECURITY DEFINER
+AS SELECT
+    s.service_code AS service_code,
+    s.service_label AS service_label,
+    s.categorie AS categorie,
+    s.pole AS pole,
+    s.capacite_lits AS capacite_lits,
+    count(a.stay_id) AS nb_actes_total,
+    round(count(a.stay_id) / nullIf(s.capacite_lits, 0), 2) AS densite_actes_par_lit
+FROM silver.dim_services AS s
+LEFT JOIN silver.fact_acte AS a ON s.service_code = a.service_code
+GROUP BY s.service_code, s.service_label, s.categorie, s.pole, s.capacite_lits
+ORDER BY densite_actes_par_lit DESC;
+
+-- KPI 5 : Montant facturé par service T2A (Valorisation financière des actes)
+CREATE OR REPLACE VIEW gold.vue_pilotage_facturation_t2a
+DEFINER = default
+SQL SECURITY DEFINER
+AS SELECT
+    s.service_code AS service_code,
+    s.service_label AS service_label,
+    s.categorie AS categorie,
+    s.pole AS pole,
+    count() AS nb_actes_total,
+    sum(c.tarif_euros) AS montant_total_t2a_euros
+FROM silver.fact_acte AS a
+JOIN silver.dim_services AS s ON a.service_code = s.service_code
+JOIN silver.dim_ccam AS c ON a.code_ccam = c.code_ccam
+GROUP BY s.service_code, s.service_label, s.categorie, s.pole
+ORDER BY montant_total_t2a_euros DESC;
+
