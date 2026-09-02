@@ -73,11 +73,11 @@ def run_gold_transformations():
     # Réadmissions 30j
     print("\n📌 Taux de Réadmission à 30 jours :")
     readm_res = client.query("""
-        SELECT mois, nb_sejours_total, nb_readmissions_30j, taux_readmission_pct
+        SELECT nb_sejours_total, nb_readmissions_30j, taux_readmission_pct
         FROM gold.vue_pilotage_readmissions_30j
     """).result_rows
     for r in readm_res:
-        print(f"  • Mois {r[0]} : {r[2]} réadmissions sur {r[1]} sorties ({r[3]}%)")
+        print(f"  • Total={r[0]} | Readmission={r[1]} | Taux Readmission={r[2]}%")
 
     # Alertes Constantes
     print("\n📌 Synthèse des Alertes Constantes Vitales :")

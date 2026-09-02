@@ -11,7 +11,7 @@ __pycache__/
 .pytest_cache/
 
 # Données & Logs locaux
-lake/.sync_manifest.json
+lake/
 *.log
 
 # Docker persistant

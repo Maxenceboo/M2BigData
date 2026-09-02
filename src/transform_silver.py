@@ -137,7 +137,7 @@ def run_silver_transformations():
             d.code_cim10,
             d.diag_type
         FROM bronze.diagnostics AS d
-        JOIN silver.fact_sejours AS s ON d.stay_id = s.stay_id
+        JOIN bronze.sejours AS s ON d.stay_id = s.stay_id
         JOIN silver.dim_patients AS p ON s.patient_pseudo_id = p.patient_pseudo_id
     """)
     silver_dia = client.query("SELECT count() FROM silver.fact_diagnostics").result_rows[0][0]
@@ -168,7 +168,7 @@ def run_silver_transformations():
                 if(m.temp_c < 36.0 OR m.temp_c >= 38.5, 'TEMP_ANORMALE', '')
             ) AS alert_reasons
         FROM bronze.monitoring AS m
-        JOIN silver.fact_sejours AS s ON m.stay_id = s.stay_id
+        JOIN bronze.sejours AS s ON m.stay_id = s.stay_id
         WHERE (m.heart_rate IS NULL OR (m.heart_rate >= 20 AND m.heart_rate <= 250))
           AND (m.spo2 IS NULL OR (m.spo2 >= 50 AND m.spo2 <= 100))
           AND (m.temp_c IS NULL OR (m.temp_c >= 30.0 AND m.temp_c <= 45.0))
