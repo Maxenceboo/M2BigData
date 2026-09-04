@@ -10,48 +10,48 @@
 ---
 
 ## Sommaire
-1. [Expression & Analyse du Besoin Métier](#1-expression--analyse-du-besoin-métier)
-2. [Inventaire & Description des Données Sources](#2-inventaire--description-des-données-sources)
-3. [Schéma d'Architecture & Justification des Choix Techniques](#3-schéma-darchitecture--justification-des-choix-techniques)
-4. [Chaîne de Traitement des Données & Contrôles Qualité](#4-chaîne-de-traitement-des-données--contrôles-qualité)
+1. [Besoin (Analyse du Besoin Métier & Usages Cibles)](#1-besoin-analyse-du-besoin-métier--usages-cibles)
+2. [Sources (Inventaire & Description des Données Sources)](#2-sources-inventaire--description-des-données-sources)
+3. [Schéma d'Architecture Justifié](#3-schéma-darchitecture-justifié-choix-techniques--patron-médaillon)
+4. [Traitements (Chaîne de Traitement & Contrôles Qualité)](#4-traitements-chaîne-de-traitement--contrôles-qualité)
    * [4.1 Sécurité & Anonymisation dès l'entrée du Lake (RGPD)](#41-sécurité--anonymisation-dès-lentrée-du-lake-rgpd)
    * [4.2 Ingestion Incrémentale Bronze & Idempotence](#42-ingestion-incrémentale-bronze--idempotence)
    * [4.3 Nettoyage Silver & Modèle en Étoile (Star Schema)](#43-nettoyage-silver--modèle-en-étoile-star-schema)
    * [4.4 Focus Décisionnel : Pourquoi le calcul des alertes est fait en Silver et non en Gold ?](#44-focus-décisionnel--pourquoi-le-calcul-des-alertes-est-fait-en-silver-et-non-en-gold-)
    * [4.5 Résolution des Deux Pièges Métier du Sujet (NEURO et 0 jointure fact-fact)](#45-résolution-des-deux-pièges-métier-du-sujet-neuro-et-0-jointure-fact-fact)
-5. [Indicateurs Métier Clés & Datamarts Gold](#5-indicateurs-métier-clés--datamarts-gold)
-6. [Visualisations & Cloisonnement Décisionnel (Metabase)](#6-visualisations--cloisonnement-décisionnel-metabase)
+5. [Indicateurs (Indicateurs Métier Clés & Datamarts Gold)](#5-indicateurs-indicateurs-métier-clés--datamarts-gold)
+6. [Visualisations (Dashboards Metabase & Cloisonnement des Droits)](#6-visualisations-dashboards-metabase--cloisonnement-des-droits)
    * [6.1 Cockpit Pilotage Hospitalier (Direction)](#61-cockpit-pilotage-hospitalier-direction)
    * [6.2 Cockpit Recherche Clinique & Épidémiologie (Chercheurs, Seuil RGPD $\ge 5$)](#62-cockpit-recherche-clinique--épidémiologie-chercheurs-seuil-rgpd-ge-5)
    * [6.3 Cockpit Facturation T2A & Plateau Technique (DIM — Évolution)](#63-cockpit-facturation-t2a--plateau-technique-dim--évolution)
-7. [Limites Identifiées & Recommandations](#7-limites-identifiées--recommandations)
+7. [Limites & Recommandations](#7-limites--recommandations-limites-du-système--recommandations-stratégiques)
    * [7.1 Limites Techniques & de Modélisation](#71-limites-techniques--de-modélisation)
    * [7.2 Recommandations Opérationnelles & Médico-Économiques](#72-recommandations-opérationnelles--médico-économiques)
 
 ---
 
-## 1. Expression & Analyse du Besoin Métier
+## 1. Besoin (Analyse du Besoin Métier & Usages Cibles)
 
-Historiquement, les données du Centre Hospitalier Universitaire (CHU) sont dispersées dans des silos logiciels hétérogènes et non communicants (Dossier Patient Informatisé, logiciel de gestion des Urgences, serveurs du Laboratoire, systèmes de télésurveillance au chevet du patient).
+### 📌 Contexte Hospitalier & Problématique :
+Au Centre Hospitalier Universitaire (CHU), les données de santé sont historiquement fragmentées dans des bases de données hétérogènes (Dossier Patient Informatisé, logiciel de gestion des Urgences, serveurs du Laboratoire, monitorings au chevet du patient) et exportées chaque jour sous des formats disparates.
 
-La Direction Générale a mandaté la création d'un **Entrepôt de Données de Santé (EDS)** unifié pour répondre à trois besoins stratégiques majeurs, strictement cloisonnés :
+La Direction du CHU a exprimé le **besoin impératif d'unifier ces données au sein d'un Entrepôt de Données de Santé (EDS)** pour répondre à 3 cas d'usage métiers majeurs, strictement cloisonnés :
 
-1. **Le Pilotage Hospitalier & Médico-Économique (Direction Générale & Directeurs de Pôles) :**
-   * Réguler les tensions capacitaires en suivant le flux d'admission et le devenir des passages aux Urgences.
-   * Mesurer l'efficience des séjours via la Durée Moyenne de Séjour (DMS) par pôle et discipline.
-   * Évaluer la qualité et la sécurité des soins à travers le taux de réadmission précoce à 30 jours et la surveillance en continu des constantes vitales (alertes physiologiques).
-2. **La Recherche Clinique & l'Épidémiologie (Praticiens Hospitaliers & Chercheurs) :**
-   * Constituer des cohortes d'études épidémiologiques et analyser la prévalence des pathologies (classification CIM-10).
-   * Décrire les profils démographiques (croisements âge et sexe) des populations prises en charge.
-   * Garantir une conformité absolue aux contraintes réglementaires du RGPD (Art. 9 relatif aux données de santé et règle de secret statistique interdisant la diffusion de cohortes inférieures à 5 patients).
-3. **Le Contrôle Médico-Économique & la Valorisation T2A (DIM — Département d'Information Médicale) :**
-   * Suivre l'activité médicale technique par la cotation des actes en nomenclature CCAM.
-   * Calculer la valorisation financière prévisionnelle T2A (Tarification à l'Activité).
-   * Analyser l'intensité et la saturation des plateaux techniques rapportées à la capacité d'accueil en lits de chaque service.
+1. **Besoin 1 — Pilotage Hospitalier (Direction Générale & Chefs de Pôle) :**
+   * *Objectif :* Avoir un cockpit de pilotage décisionnel pour fluidifier le parcours patient.
+   * *Besoins fonctionnels :* Suivre en continu la tension des Urgences (flux journalier, taux d'hospitalisation), mesurer l'efficience des services via la Durée Moyenne de Séjour (DMS), contrôler la sécurité des soins via les réadmissions précoces à 30 jours et surveiller les constantes vitales en temps réel (alertes physiologiques).
+
+2. **Besoin 2 — Recherche Clinique & Épidémiologie (Praticiens & Épidémiologistes) :**
+   * *Objectif :* Faciliter les études observationnelles et la constitution de cohortes sans risque de ré-identification.
+   * *Besoins fonctionnels :* Évaluer la prévalence des pathologies (codes CIM-10), caractériser les populations par tranche d'âge et sexe, tout en respectant strictement la réglementation RGPD (Art. 9 sur les données sensibles et règle du secret statistique $\ge 5$ patients par cellule).
+
+3. **Besoin 3 — Valorisation Médico-Économique T2A (DIM — Département d'Information Médicale) :**
+   * *Objectif :* Optimiser les recettes de l'établissement et piloter la charge des plateaux techniques.
+   * *Besoins fonctionnels :* Réconcilier les actes médicaux cotés (nomenclature CCAM) avec les séjours, calculer la valorisation financière T2A (2,2 M€), analyser l'intensité et la saturation des lits par service.
 
 ---
 
-## 2. Inventaire & Description des Données Sources
+## 2. Sources (Inventaire & Description des Données Sources)
 
 L'établissement dépose chaque jour ses fichiers bruts dans un espace partagé `source-filestorage/`, accessible en lecture seule. Les formats sont volontairement hétérogènes pour refléter la réalité du système d'information hospitalier :
 
@@ -68,7 +68,7 @@ L'établissement dépose chaque jour ses fichiers bruts dans un espace partagé 
 
 ---
 
-## 3. Schéma d'Architecture & Justification des Choix Techniques
+## 3. Schéma d'Architecture Justifié (Choix Techniques & Patron Médaillon)
 
 Le système implémente l'architecture de référence « patron médaillon » (Lake $\to$ Bronze $\to$ Silver $\to$ Gold $\to$ Restitution) :
 
@@ -90,7 +90,7 @@ Le système implémente l'architecture de référence « patron médaillon » (L
 
 ---
 
-## 4. Chaîne de Traitement des Données & Contrôles Qualité
+## 4. Traitements (Chaîne de Traitement & Contrôles Qualité)
 
 ### 4.1 Sécurité & Anonymisation dès l'entrée du Lake (RGPD)
 Conformément aux exigences de l'Article 9 du RGPD et à la valorisation bonus du projet :
@@ -167,7 +167,7 @@ Une décision de conception déterminante réside dans le pré-calcul des indica
 
 ---
 
-## 5. Indicateurs Métier Clés & Datamarts Gold
+## 5. Indicateurs (Indicateurs Métier Clés & Datamarts Gold)
 
 ![Schéma Couche Gold](schema_gold.png)
 
@@ -193,7 +193,7 @@ Toutes les vues Gold sont sécurisées via `DEFINER = default SQL SECURITY DEFIN
 
 ---
 
-## 6. Visualisations & Cloisonnement Décisionnel (Metabase)
+## 6. Visualisations (Dashboards Metabase & Cloisonnement des Droits)
 
 La sécurité d'accès repose sur deux niveaux étanches :
 1. **Niveau ClickHouse :** Compte technique `metabase_user` disposant strictement du droit `SELECT ON gold.*` (`ACCESS_DENIED` sur `silver.*` et `bronze.*`).
@@ -231,7 +231,7 @@ La sécurité d'accès repose sur deux niveaux étanches :
 
 ---
 
-## 7. Limites Identifiées & Recommandations
+## 7. Limites & Recommandations (Limites du Système & Recommandations Stratégiques)
 
 ### 7.1 Limites Techniques & de Modélisation
 
