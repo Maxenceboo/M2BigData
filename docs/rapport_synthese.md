@@ -17,6 +17,11 @@
 5. [Couche Gold — Vues Analytiques & Datamarts Métier](#5-couche-gold--vues-analytiques--datamarts-métier)
 6. [Modèle de Données Global & Résolution des Pièges](#6-modèle-de-données-global--résolution-des-pièges)
 7. [Restitution Décisionnelle & Cloisonnement des 3 Profils](#7-restitution-décisionnelle--cloisonnement-des-3-profils)
+8. [Analyse Métier des Indicateurs Clés (KPI)](#8-analyse-métier-des-indicateurs-clés-kpi)
+   * [8.1 Axe Pilotage Hospitalier (Direction)](#81-axe-pilotage-hospitalier-direction)
+   * [8.2 Axe Recherche Clinique & Épidémiologie (RGPD)](#82-axe-recherche-clinique--épidémiologie-rgpd)
+   * [8.3 Axe Facturation T2A & Plateau Technique (DIM — Évolution)](#83-axe-facturation-t2a--plateau-technique-dim--évolution)
+   * [8.4 Recommandations Stratégiques & Opérationnelles](#84-recommandations-stratégiques--opérationnelles)
 
 ---
 
@@ -157,3 +162,104 @@ Les données sont restituées sur **3 tableaux de bord étanches** accessibles p
 | **Responsable DIM** | `dim@eds-chu.fr` | Exclusif à `💰 Facturation T2A & Plateau` | **Facturation T2A & Plateau Technique**<br>Cotation CCAM, recettes T2A (2,2 M€) et saturation des plateaux. |
 
 *(Administration technique : `admin@eds-chu.fr`)*
+
+---
+
+## 8. Analyse Métier des Indicateurs Clés (KPI)
+
+### 8.1 Axe Pilotage Hospitalier (Direction)
+
+Ce volet permet à la direction générale et aux chefs de pôles de suivre la tension hospitalière, la fluidité des flux d'admission et la qualité des soins.
+
+![Tableau de Bord - Pilotage Hospitalier](screenshot_pilotage.png)
+
+#### Tableau récapitulatif des métriques clés :
+
+| Indicateur Clé | Valeur Observée | Seuil / Référentiel | Constat & Diagnostic Métier |
+| :--- | :---: | :---: | :--- |
+| **DMS Globale CHU** | **5.15 jours** | 5.0 – 5.5 jours | Durée moyenne maîtrisée, conforme aux standards universitaires. |
+| **Séjours Clôturés vs En Cours** | **6 046 / 683** | Capacité nominale | Activité soutenue avec 683 lits occupés au terme de la période. |
+| **Passages aux Urgences (Total)** | **1 423 passages** | ~50 passages / jour | Flux régulier avec un pic d'activité le 21 août (82 passages). |
+| **Taux d'Hospitalisation post-Urgences** | **31.75 %** | 25 – 35 % | Tension significative sur les lits d'aval (418 admissions / mutations). |
+| **Taux de Réadmission Précoce (30j)** | **10.54 %** | Cible < 12 % | Bon niveau de suivi post-hospitalisation (637 réadmissions). |
+| **Taux Global d'Alertes Constantes** | **7.46 %** | 5 – 8 % | Surveillance physiologique efficace (3 052 alertes / 40 920 mesures). |
+
+#### Analyse synthétique en bref :
+* **Durée de séjour par service :**
+  * Les services lourds affichent les séjours les plus longs : **Réanimation** (**9.05 jours**) et **Neurologie** (**7.06 jours**, suite d'AVC et bilan d'orientation SSR).
+  * Les services à forte rotation présentent des durées courtes : **Cardiologie** (**5.31 jours**), **Chirurgie** (**4.39 jours**), **Pédiatrie** (**3.19 jours**) et **Urgences** (**2.15 jours** en unité d'observation courte durée).
+* **Devenir des passages aux urgences (1 423 passages) :**
+  * **45.9 % de retours à domicile** (653 patients traités en ambulatoire).
+  * **31.8 % d'admissions en aval** (228 mutations internes vers la médecine et 190 transferts vers le GHT).
+  * **14.5 % de décès aux urgences** (206 situations critiques aiguës prises en charge par le SMUR).
+* **Typologie des 3 052 alertes vitales :**
+  * **Hypoxie ($SpO_2 < 92\%$) :** 36.9 % des alertes (1 127 cas, très liée aux pathologies respiratoires).
+  * **Anomalies thermiques ($T < 36^\circ\text{C}$ ou $\ge 38.5^\circ\text{C}$) :** 35.5 % des alertes (1 082 cas, détection d'états fébriles/sepsis).
+  * **Fréquence cardiaque ($FC < 50$ ou $> 120\text{ bpm}$) :** 27.6 % des alertes (843 cas, troubles du rythme et tachycardies).
+
+---
+
+### 8.2 Axe Recherche Clinique & Épidémiologie (RGPD)
+
+Ce volet met à disposition des praticiens et épidémiologistes l'exploration des cohortes cliniques sous stricte pseudonymisation et respect de la confidentialité.
+
+![Tableau de Bord - Recherche Clinique (RGPD)](screenshot_recherche.png)
+
+#### Tableau récapitulatif des cohortes :
+
+| Indicateur Recherche | Valeur Observée | Règle Réglementaire | Interprétation Épidémiologique |
+| :--- | :---: | :---: | :--- |
+| **Patients Uniques Inclus** | **6 000 patients** | Pseudonymisation salée | Base de patients dédoublonnée, sans identifiant direct en clair. |
+| **Diagnostics Référencés** | **12 720 diagnostics** | Classification CIM-10 | Richesse diagnostique élevée (~2.1 diagnostics par patient). |
+| **Pathologies Distinctes Surveillées** | **13 pathologies** | Référentiel OMS | Couverture des grandes affections chroniques et aiguës. |
+| **Seuil de Confidentialité RGPD** | **$\ge 5$ patients** | Article 9 RGPD | Aucune cohorte < 5 patients n'est diffusée (zéro ré-identification). |
+
+#### Analyse synthétique en bref :
+* **Comorbidités chroniques vs Motifs d'admission directe :**
+  * *Les comorbidités de fond :* L'infection des voies urinaires (`N39`, 2 234 patients), le diabète de type 2 (`E11`, 2 177 patients) et l'insuffisance cardiaque (`I50`, 2 156 patients) touchent chacun plus d'un tiers de la cohorte, quasi systématiquement codés en **diagnostic associé** (~65 %).
+  * *Les épisodes aigus déclencheurs :* L'infarctus (`I21`), l'AVC ischémique (`I63`), l'appendicite (`K35`) et les pneumopathies (`J18`) sont quant à eux codés **à 100 % en diagnostic principal**.
+* **Pyramide des âges et caractéristiques de cohorte :**
+  * **51 % des patients ont plus de 60 ans**, avec un pic majeur sur la tranche **60–69 ans (2 388 patients, 18.7 %)**.
+  * Prédominance masculine entre 40 et 79 ans (sur-risque cardiovasculaire et respiratoire), puis inversion au profit des femmes au-delà de 80 ans liée à l'espérance de vie.
+
+---
+
+### 8.3 Axe Facturation T2A & Plateau Technique (DIM — Évolution)
+
+Ce volet nouveau (issu de l'évolution du 29/08/2026) est dédié au Département d'Information Médicale (DIM) pour le suivi de l'activité technique et la valorisation financière des séjours.
+
+![Tableau de Bord - Facturation T2A & Plateau Technique](screenshot_t2a.png)
+
+#### Tableau récapitulatif des métriques médico-économiques :
+
+| Indicateur T2A | Valeur Observée | Référentiel Métier | Interprétation Médico-Économique |
+| :--- | :---: | :---: | :--- |
+| **Volume Total d'Actes CCAM** | **8 112 actes** | 8 codes CCAM répertoriés | Activité technique soutenue sur l'ensemble de l'établissement. |
+| **Montant Total Facturé T2A** | **2 199 450 €** | Grille tarifaire T2A | Recettes hospitalières valorisées selon les actes cotés. |
+| **Densité Moyenne par Lit** | **38.64 actes / lit** | 191 lits décrits | Utilisation soutenue des équipements du plateau technique. |
+| **Intensité d'Actes par Séjour** | **1.59 acte / séjour** | 5 096 séjours concernés | Homogénéité exemplaire des pratiques de prescription. |
+
+#### Analyse synthétique en bref :
+* **Répartition des recettes par service :**
+  * **Cardiologie :** **521 655 €** (23.7 % du total), premier contributeur grâce aux actes interventionnels.
+  * **Urgences :** **478 585 €** (21.8 %), forte valorisation liée au flux massif de patients.
+  * **Neurologie :** **393 850 €** (17.9 %), volume d'imagerie lourde (IRM cérébrale).
+  * **Pneumologie :** **268 045 €** (12.2 %), soins respiratoires spécialisés.
+  * *Ces 4 services génèrent à eux seuls plus de 75 % des recettes de l'hôpital.*
+* **Effet Volume vs Effet Valeur sur la CCAM :**
+  * *Actes de routine à fort volume :* La radiographie thoracique (1 043 actes @ 25 € = 26 k€) et la consultation de suivi (1 039 actes @ 25 € = 26 k€) représentent 25.7 % des actes pour seulement 2.4 % des recettes.
+  * *Actes piliers de rentabilité :* L'appendicectomie (978 actes @ 800 € = 782 k€) et la coronarographie (1 030 actes @ 450 € = 463 k€) concentrent plus de **56 % des recettes totales**.
+* **Taux d'utilisation des plateaux techniques (Actes / Lit) :**
+  * **Urgences (86.55 actes / lit) :** Rotation maximale des 20 lits de l'UHCD.
+  * **Cardiologie (64.50 actes / lit) :** Plateau de coronarographie sous haute tension pour 30 lits.
+  * **Chirurgie (14.10) & Oncologie (6.89) :** Activité technique plus espacée, orientée vers les soins de suite.
+
+---
+
+### 8.4 Recommandations Stratégiques & Opérationnelles
+
+1. **Désengorgement des Urgences :** Avec 31.75 % d'hospitalisations post-urgences, organiser la libération anticipée des lits de médecine (Cardio, Pneumo) dès 11h du matin pour accueillir les transferts de l'après-midi.
+2. **Suivi Ciblé Post-Séjour (Réadmissions 30j) :** Renforcer la coordination ville-hôpital à J+7 pour les patients insuffisants cardiaques (`I50`) et BPCO (`J44`), principales causes des 10.54 % de réadmissions.
+3. **Dimensionnement du Plateau de Cardiologie :** Face à une densité de 64.5 actes/lit et 521 k€ de recettes, la création de 5 lits d'hospitalisation de semaine permettrait d'augmenter le potentiel interventionnel sans saturer les lits d'urgence.
+4. **Mise à Jour Administrative du Référentiel :** Intégrer formellement le service de Neurologie dans `description_service.csv` (lits autorisés et pôle de rattachement) pour éliminer le statut de repli par défaut *« Non catégorisé »*.
+
