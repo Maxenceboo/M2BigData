@@ -8,9 +8,10 @@
 
 ## 📌 Synthèse Exécutive
 
-L'Entrepôt de Données de Santé (EDS) consolide les flux opérationnels de l'établissement à travers deux axes stratégiques distincts et cloisonnés :
+L'Entrepôt de Données de Santé (EDS) consolide les flux opérationnels de l'établissement à travers trois axes stratégiques distincts et rigoureusement cloisonnés :
 1. **Le Pilotage Hospitalier (Direction & Chefs de pôle) :** Surveillance de la fluidité des parcours de soins, de la tension des urgences, de l'efficience médico-économique des services (DMS) et de la sécurité des soins (vigilance constante et réadmissions précoces).
 2. **La Recherche Clinique & Épidémiologie (Praticiens & Chercheurs) :** Exploration des cohortes de patients pseudonymisées, caractérisation démographique et prévalence des pathologies CIM-10, dans le respect strict des contraintes du RGPD (Art. 9 et règle des petits effectifs $\ge 5$).
+3. **La Facturation T2A & le Plateau Technique (DIM & Contrôle de Gestion — Évolution Lot 2026-08-29) :** Suivi médico-économique des actes cotés en CCAM, valorisation des recettes hospitalières (T2A), analyse de la saturation des plateaux techniques par lit et segmentation par catégorie de service.
 
 ---
 
@@ -133,8 +134,156 @@ Sur **40 920 mesures** analysées en temps réel par les capteurs de chevet :
 
 ---
 
-## 3️⃣ Recommandations Opérationnelles pour l'Établissement
+## 3️⃣ Axe Facturation T2A, Nomenclature CCAM & Plateau Technique (Évolution — Lot 2026-08-29)
 
+![Tableau de Bord - Facturation T2A & Plateau Technique](screenshot_t2a.png)
+
+### 📊 Tableau de Bord Récapitulatif des Métriques T2A & Plateau Technique
+
+| Indicateur Évolution | Valeur Observée | Référentiel / Benchmark | Interprétation & Diagnostic Médico-Économique |
+| :--- | :---: | :---: | :--- |
+| **Volume Total d'Actes CCAM** | **8 112 actes** | 8 codes CCAM répertoriés | Activité chirurgicale et interventionnelle soutenue sur le mois d'août. |
+| **Montant Global Facturé T2A** | **2 199 450 €** | Tarifs réglementaires T2A | Recettes valorisées réparties sur l'ensemble des pôles de soins. |
+| **Densité Moyenne Plateau** | **38.64 actes / lit** | Base 191 lits décrits | Forte sollicitation des équipements techniques et des personnels soignants. |
+| **Ratio Actes par Séjour** | **1.59 actes / séjour** | 5 096 séjours concernés | Prise en charge technique standardisée et homogène sur tous les services. |
+| **Service Leader en Facturation** | **Cardiologie (521 655 €)** | 23.7 % des recettes CHU | Pôle d'excellence interventionnel porté par les coronarographies. |
+| **Service en Plus Forte Densité** | **Urgences (86.55 actes/lit)** | 20 lits d'UHCD | Rotation technique extrême (radiographies, bilans d'admission rapides). |
+
+---
+
+### 💰 Valorisation Financière T2A & Recettes par Pôle et Service
+
+![Valorisation Financière T2A par Service (€)](diag_t2a_services.png)
+
+L'analyse de la valorisation T2A montre une concentration stratégique des recettes hospitalières sur trois services pivots :
+
+| Service | Pôle Hospitalier | Catégorie | Actes Réalisés | Recettes T2A (€) | Part des Recettes (%) |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **Cardiologie** | Coeur-Poumon | Médecine | **1 935** | **521 655 €** | **23.72 %** |
+| **Urgences** | Urgences | Urgences | **1 731** | **478 585 €** | **21.76 %** |
+| **Neurologie** | Pôle Indéterminé | Non catégorisé *(Défaut)* | **1 471** | **393 850 €** | **17.91 %** |
+| **Pneumologie** | Coeur-Poumon | Médecine | **1 009** | **268 045 €** | **12.19 %** |
+| **Pédiatrie** | Femme-Enfant | Pédiatrie | **598** | **171 165 €** | **7.78 %** |
+| **Réanimation** | Soins critiques | Réanimation | **563** | **154 740 €** | **7.04 %** |
+| **Chirurgie** | Chirurgie | Chirurgie | **564** | **147 145 €** | **6.69 %** |
+| **Oncologie** | Cancérologie | Médecine | **241** | **64 265 €** | **2.92 %** |
+| **TOTAL CHU** | — | — | **8 112** | **2 199 450 €** | **100.00 %** |
+
+* **Les 3 pôles moteurs :** La **Cardiologie**, les **Urgences** et la **Neurologie** génèrent à eux seuls **63.4 % des recettes hospitalières** (1.39 M€ sur 2.20 M€).
+* **Synergie Pôle Coeur-Poumon :** Ce pôle regroupe **789 700 €** de valorisation (35.9 % du total CHU), affirmant sa vocation de centre de référence régional pour les pathologies thoraciques et cardiovasculaires aiguës.
+* **Oncologie & Soins Spécifiques :** Bien que l'Oncologie affiche un volume d'actes plus modéré (241 actes), sa valorisation se concentre sur les poses de cathéters centraux indispensables aux chimiothérapies.
+
+---
+
+### 📋 Palmarès de la Cotation CCAM & Analyse Tarifaire
+
+![Palmarès des Actes CCAM les plus Fréquents](diag_top_ccam.png)
+
+La nomenclature CCAM (Classification Commune des Actes Médicaux) se structure en deux catégories très contrastées : **les actes à fort volume / faible tarif** vs **les actes techniques à haute valeur unitaire** :
+
+| Code CCAM | Libellé de l'Acte Médical | Tarif Réglementaire | Volume d'Actes | Montant Total Valorisé | Typologie d'Activité |
+| :---: | :--- | :---: | :---: | :---: | :--- |
+| **`HHFA001`** | **Appendicectomie** | **800 €** | 978 | **782 400 €** | Chirurgie digestive d'urgence (35.6 % des recettes globales) |
+| **`DZEA001`** | **Coronarographie** | **450 €** | 1 030 | **463 500 €** | Cardiologie interventionnelle diagnostique et thérapeutique |
+| **`NEJA001`** | **IRM cérébrale** | **300 €** | 982 | **294 600 €** | Imagerie neuroradiologique lourde (AVC et bilans cérébraux) |
+| **`HGQD001`** | **Coloscopie totale** | **260 €** | 1 015 | **263 900 €** | Endoscopie digestive diagnostique et dépistage |
+| **`GLLD001`** | **Ventilation mécanique assistée** | **220 €** | 1 000 | **220 000 €** | Soins critiques et réanimation respiratoire |
+| **`EBLA003`** | **Pose de cathéter central** | **120 €** | 1 025 | **123 000 €** | Geste d'abord vasculaire pour réanimation et oncologie |
+| **`ZBQK001`** | **Radiographie du thorax** | **25 €** | **1 043 (Top 1)** | **26 075 €** | Imagerie conventionnelle de routine (première intention) |
+| **`YYYY010`** | **Consultation de suivi** | **25 €** | 1 039 | **25 975 €** | Acte clinique de suivi de consultation externe |
+
+#### 💡 Analyse Volume vs Valeur :
+1. **Effet Volume (Routine hospitalière) :** La *Radiographie du thorax* (`ZBQK001`) et la *Consultation de suivi* (`YYYY010`) représentent **25.7 % des actes réalisés**, mais seulement **2.36 % des recettes financières** (52 050 €). Ce sont des actes pivots de parcours, indispensables à l'orientation clinique mais faiblement rémunérateurs au forfait direct.
+2. **Effet Valeur (Piliers médico-économiques) :** L'*Appendicectomie* (`HHFA001`) et la *Coronarographie* (`DZEA001`) cumulent à elles deux **plus de 1,24 million d'euros** (56.6 % des recettes totales). Elles constituent le coeur de marge opérationnelle du CHU.
+
+---
+
+### 🏥 Intensité d'Activité sur le Plateau Technique & Densité par Lit
+
+![Intensité d'Activité sur le Plateau Technique (Actes / Lit)](diag_densite_plateau.png)
+
+Le ratio de **Densité d'actes par lit** (`nb_actes_total / capacite_lits`) mesure le niveau de pression opérationnelle et d'utilisation des plateaux techniques par lit d'hospitalisation :
+
+```text
+[Urgences]     ████████████████████ 86.55 actes/lit (20 lits | 1 731 actes)
+[Cardiologie]  ███████████████ 64.50 actes/lit (30 lits | 1 935 actes)
+[Pneumologie]  ████████ 36.04 actes/lit (28 lits | 1 009 actes)
+[Réanimation]  ████████ 35.19 actes/lit (16 lits | 563 actes)
+[Pédiatrie]    ██████ 27.18 actes/lit (22 lits | 598 actes)
+[Chirurgie]    ███ 14.10 actes/lit (40 lits | 564 actes)
+[Oncologie]    ██ 6.89 actes/lit (35 lits | 241 actes)
+[Neurologie]   — Non calculé (Service non décrit dans le référentiel capacitaire)
+```
+
+* **Urgences (86.55 actes / lit) :** Ratio record, traduisant le turnover rapide des lits de surveillance continue / UHCD. Chaque lit voit passer plusieurs patients par 24h bénéficiant chacun d'examens d'imagerie et d'évaluation rapide.
+* **Cardiologie (64.50 actes / lit) :** Activité interventionnelle intensive. Avec seulement 30 lits, le service réalise 1 935 actes grâce à un plateau de coronarographie tournant à flux tendu.
+* **Pneumologie (36.04) & Réanimation (35.19) :** Niveaux d'intensité intermédiaires élevés, associant actes techniques répétés (ventilations assistées, radiographies de contrôle régulières au lit du patient).
+* **Oncologie (6.89) & Chirurgie (14.10) :** Ratios plus modérés reflétant des hospitalisations orientées sur les suites opératoires ou des cycles de surveillance médicale plutôt que sur la multiplication quotidienne d'actes CCAM lourds.
+
+---
+
+### ⏱️ Activité et Durée Moyenne de Séjour par Catégorie de Service
+
+![Activité & DMS par Catégorie de Service](diag_categories_activite.png)
+
+Le croisement hiérarchique (`service_label` $\to$ `categorie` $\to$ `pole`) permet d'évaluer la performance organisationnelle par grande discipline hospitalière :
+
+| Catégorie de Service | Pôle Hospitalier | Séjours Clôturés | Séjours en Cours | DMS (jours) | Profil d'Activité |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Médecine** | Coeur-Poumon | **2 212** | 229 | **5.61 j** | Plus gros volume d'activité médicale (Cardio + Pneumo) |
+| **Urgences** | Urgences | **1 277** | 146 | **2.15 j** | Court séjour et observation rapide avant orientation |
+| **Non catégorisé** | Pôle Indéterminé | **1 077** | 131 | **7.06 j** | Activité neurologique (prise en charge AVC et SSR) |
+| **Pédiatrie** | Femme-Enfant | **448** | 55 | **3.19 j** | Rotation pédiatrique fluide et prise en charge aiguë courte |
+| **Chirurgie** | Chirurgie | **424** | 52 | **4.39 j** | Séjours opératoires programmés et ambulatoire |
+| **Réanimation** | Soins critiques | **423** | 44 | **9.05 j** | Défaillances multiviscérales et séjours prolongés |
+| **Médecine** | Cancérologie | **185** | 26 | **6.87 j** | Chimiothérapies et bilans d'extension complexes |
+
+---
+
+### 🩺 Volume d'Actes & Intensité par Séjour
+
+L'évaluation du nombre moyen d'actes par séjour révèle une **remarquable homogénéité des pratiques cliniques** à travers tous les services hospitaliers :
+
+| Service | Séjours avec Actes | Total Actes Réalisés | Moyenne d'Actes / Séjour |
+| :--- | :---: | :---: | :---: |
+| **Chirurgie** | 344 | 564 | **1.64 actes / séjour** |
+| **Cardiologie** | 1 213 | 1 935 | **1.60 actes / séjour** |
+| **Neurologie** | 918 | 1 471 | **1.60 actes / séjour** |
+| **Urgences** | 1 090 | 1 731 | **1.59 actes / séjour** |
+| **Réanimation** | 355 | 563 | **1.59 actes / séjour** |
+| **Pédiatrie** | 379 | 598 | **1.58 actes / séjour** |
+| **Pneumologie** | 642 | 1 009 | **1.57 actes / séjour** |
+| **Oncologie** | 155 | 241 | **1.55 actes / séjour** |
+| **MOYENNE GLOBALE** | **5 096 séjours** | **8 112 actes** | **1.59 actes / séjour** |
+
+* Sur les **6 729 séjours valides** du CHU, **5 096 séjours (75.7 %)** ont donné lieu à au moins un acte médical technique.
+* Le ratio moyen se situe strictement entre **1.55 et 1.64 actes par séjour**, démontrant que la réalisation des actes techniques est strictement calibrée selon des protocoles de soins standardisés sans sur-prescription ni dérive consumériste d'actes.
+
+---
+
+### 🛡️ Réponses Rigoureuses aux Deux Pièges Métier du Sujet
+
+1. **Piège 1 : Référentiel de description incomplet (Service `NEURO` non décrit) :**
+   * *Problématique :* Le fichier `description_service.csv` ne décrivait que 7 services sur les 8 présents dans l'entrepôt (`NEURO` était absent).
+   * *Solution implémentée :* Utilisation d'une jointure `LEFT JOIN` avec valeurs de substitution sécurisées : `categorie = 'Non catégorisé'`, `capacite_lits = 0`, `pole = 'Pôle Indéterminé'`.
+   * *Bénéfice :* **Zéro perte de données**, traçabilité immédiate de l'absence de référentiel, et non-blocage du pipeline décisionnel.
+2. **Piège 2 : « Actes par service » porté par le séjour sans jointure fact-to-fact :**
+   * *Problématique :* Le fichier `actes.parquet` ne contient pas de colonne `service_code`. Relier `fact_acte` et `fact_sejours` dans la couche Gold constituerait un anti-pattern majeur du Big Data (jointure de deux volumétries colossales).
+   * *Solution implémentée :* Dénormalisation contrôlée de `service_code` directement lors de l'insertion dans `silver.fact_acte` via `silver.fact_sejours` (avec fallback sur `bronze.sejours`).
+   * *Bénéfice :* Les requêtes Gold effectuent uniquement une jointure rapide en étoile `fact_acte ⋈ dim_services`, offrant des performances sous la milliseconde sans goulot d'étranglement mémoire.
+3. **Cloisonnement Applicatif du 3e Rôle (DIM) :**
+   * L'utilisateur `dim@eds-chu.fr` dispose d'un accès strictement exclusif au tableau de bord médico-économique, sans accréditation sur les cohortes cliniques nominatives ou sur les alertes vitales de la direction.
+
+---
+
+## 4️⃣ Recommandations Opérationnelles & Médico-Économiques pour l'Établissement
+
+### 🏥 1. Axe Régulation des Flux & Qualité des Soins (Direction)
 1. **Gestion des lits d'aval aux Urgences :** Avec un taux d'hospitalisation de **31.75 %**, l'optimisation des sorties en fin de matinée dans les services de médecine (Cardio, Pneumo) est la clé pour désengorger les urgences entre 14h et 18h.
 2. **Prévention des Réadmissions 30j (10.54 %) :** Mettre en place un protocole de suivi post-hospitalisation renforcé (téléconsultation à J+7) ciblé en priorité sur les patients âgés insuffisants cardiaques (`I50`) et BPCO (`J44`).
 3. **Optimisation des Alertes Constantes (7.46 %) :** Ajuster les plages de sensibilité des oxymètres de chevet chez les patients BPCO connus (pour lesquels une $SpO_2$ entre 88% et 92% est souvent tolérée physiologiquement) afin de réduire la fatigue d'alarme des équipes soignantes.
+
+### 💰 2. Axe Valorisation T2A & Pilotage des Plateaux Techniques (DIM & Gestion)
+4. **Optimisation du Plateau Interventionnel de Cardiologie :** Le service de Cardiologie présente une saturation de **64.50 actes/lit** et génère **521 k€**. Une extension capacitaire de 5 à 10 lits d'hospitalisation de semaine permettrait d'augmenter le volume de coronarographies programmées sans saturer les lits d'hospitalisation conventionnelle.
+5. **Fiabilisation du Référentiel de Structure Hospitalière :** Informer immédiatement la Direction du Système d'Information (DSI) et la Direction des Ressources Matérielles pour intégrer officiellement le service de **Neurologie** dans `description_service.csv` (définition de sa capacité de lits et de son rattachement de pôle), afin d'éliminer la mention *« Non catégorisé »*.
+6. **Audit de Codage des Actes Associés aux Urgences :** Avec 1 731 actes pour 1 423 passages (1.59 acte/séjour), s'assurer que l'exhaustivité des gestes techniques réalisés en salle de déchocage (pose de VVP, ECG systématiques) est intégrée au dossier patient pour maximiser la valorisation T2A du service.

@@ -38,24 +38,24 @@ package "1. COUCHE BRONZE (Données Brutes Ingestées)" #FBEEE6 {
     entity "bronze.monitoring" as b_mon <<BRONZE>>
     entity "bronze.ref_services" as b_refs <<BRONZE>>
     entity "bronze.ref_cim10" as b_refc <<BRONZE>>
-    entity "bronze.ref_description_service" as b_desc [Évolution] <<BRONZE>>
-    entity "bronze.ref_ccam" as b_ccam [Évolution] <<BRONZE>>
-    entity "bronze.actes" as b_act [Évolution] <<BRONZE>>
+    entity "bronze.ref_description_service" as b_desc <<BRONZE>>
+    entity "bronze.ref_ccam" as b_ccam <<BRONZE>>
+    entity "bronze.actes" as b_act <<BRONZE>>
 }
 
 package "2. COUCHE SILVER (Star Schema : 4 Facts & 4 Dimensions)" #FAFAFA {
     package "Dimensions" #EBF5FB {
         entity "silver.dim_patients" as s_pat <<DIMENSION>>
-        entity "silver.dim_services" as s_refs [Enrichie] <<DIMENSION>>
+        entity "silver.dim_services" as s_refs <<DIMENSION>>
         entity "silver.dim_cim10" as s_refc <<DIMENSION>>
-        entity "silver.dim_ccam" as s_ccam [Nouveau] <<DIMENSION>>
+        entity "silver.dim_ccam" as s_ccam <<DIMENSION>>
     }
 
     package "4 Tables de Faits Indépendantes" #FDEDEC {
         entity "silver.fact_sejours" as s_sej <<FACT>>
         entity "silver.fact_diagnostics" as s_dia <<FACT>>
         entity "silver.fact_monitoring" as s_mon <<FACT>>
-        entity "silver.fact_acte" as s_act [Nouveau Fact] <<FACT>>
+        entity "silver.fact_acte" as s_act <<FACT>>
     }
 }
 
