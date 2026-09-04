@@ -9,12 +9,11 @@
 
 Le dossier d'évaluation et la documentation complète sont disponibles aux formats PDF et Markdown :
 
-| Document | Format PDF (Imprimable) | Format Markdown (Source) | Description |
-| :--- | :---: | :---: | :--- |
-| **Rapport de Synthèse de Référence** | [📄 **`docs/rapport_synthese.pdf`**](docs/rapport_synthese.pdf) | [📝 `docs/rapport_synthese.md`](docs/rapport_synthese.md) | **Dossier complet d'évaluation (12 pages)** : Besoins, sources, architecture justifiée, chaîne ELT, justification Silver vs Gold pour les alertes, résolution des pièges (`NEURO`, zéro jointure fact-fact), métriques et dashboards. |
-| **Dossier d'Analyse Métier & KPIs** | [📊 `docs/analyse_kpi_metier.pdf`](docs/analyse_kpi_metier.pdf) | [📝 `docs/analyse_kpi_metier.md`](docs/analyse_kpi_metier.md) | Analyse approfondie des 3 axes hospitaliers : Pilotage, Recherche clinique (RGPD $\ge 5$), Facturation T2A & Plateau technique. |
-| **Gestion des Accès & Sécurité** | [🔐 `docs/gestion_acces_metabase.pdf`](docs/gestion_acces_metabase.pdf) | [📝 `docs/gestion_acces_metabase.md`](docs/gestion_acces_metabase.md) | Matrice de droits, comptes de test Metabase et politique de sécurité étanche (ClickHouse DEFINER & collections). |
-| **Suivi d'Avancement** | [✅ `TODO.pdf`](TODO.pdf) | [📝 `TODO.md`](TODO.md) | Feuille de route et validation exhaustive des 13 étapes des Parties 1 & 2. |
+| Document | Format | Description |
+| :--- | :---: | :--- |
+| **Rapport de Synthèse de Référence** | [📄 **Version PDF**](docs/rapport_synthese.pdf) &nbsp;\|&nbsp; [📝 Version Markdown](docs/rapport_synthese.md) | **Dossier complet d'évaluation (12 pages)** : Besoins, sources, architecture justifiée, chaîne ELT, justification Silver vs Gold pour les alertes, résolution des pièges (`NEURO`, zéro jointure fact-fact), métriques et dashboards. |
+| **Dossier d'Analyse Métier & KPIs** | [📝 Version Markdown](docs/analyse_kpi_metier.md) | Analyse approfondie des 3 axes hospitaliers : Pilotage, Recherche clinique (RGPD ≥ 5), Facturation T2A & Plateau technique. |
+| **Gestion des Accès & Sécurité** | [📝 Version Markdown](docs/gestion_acces_metabase.md) | Matrice de droits, comptes de test Metabase et politique de sécurité étanche (ClickHouse DEFINER & collections). |
 
 ---
 
@@ -82,7 +81,7 @@ L'interface Metabase est accessible à l'adresse : **`http://localhost:3000`**
 | Profil Métier | Adresse Email | Mot de passe | Périmètre & Droits Autorisés |
 | :--- | :--- | :--- | :--- |
 | **Direction Générale** | `directeur@eds-chu.fr` | `DirecteurPassword123!` | Collection **🏥 Pilotage Hospitalier** (DMS, flux urgences, réadmissions 30j, alertes vitales). |
-| **Chercheur Clinique** | `chercheur@eds-chu.fr` | `ChercheurPassword123!` | Collection **🔬 Recherche Clinique** (Données pseudonymisées, prévalence CIM-10, règle du secret statistique $N \ge 5$). |
+| **Chercheur Clinique** | `chercheur@eds-chu.fr` | `ChercheurPassword123!` | Collection **🔬 Recherche Clinique** (Données pseudonymisées, prévalence CIM-10, règle du secret statistique N ≥ 5). |
 | **DIM / Facturation** | `dim@eds-chu.fr` | `DimPassword123!` | Collection **💰 Facturation T2A & Plateau Technique** (Actes CCAM, recettes 2,2 M€, saturation des lits). |
 | **Administrateur Technique** | `admin@eds-chu.fr` | `AdminPassword123!` | Administration globale de l'instance et gestion des groupes. |
 
